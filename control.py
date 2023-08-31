@@ -1,11 +1,10 @@
-import numpy as np
-
+from numpy import sin , array
 def input(inp_type , t , amplitude):
     if inp_type == 'sin':
-        return np.array([amplitude * np.sin(t)])
+        return array([amplitude * sin(t)])
     elif inp_type == 'step':
-        return np.array([amplitude * 1])
+        return array([amplitude * 1])
     elif inp_type == 'ramp':
-        return np.array([amplitude * t])
+        return array([amplitude * t])
     else:
         return 0
