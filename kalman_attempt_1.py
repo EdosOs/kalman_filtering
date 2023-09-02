@@ -11,35 +11,37 @@ from ode import acceleration_model , velocity_model
 # define agents
 state_dim = 4
 measurement_dim = 2
-num_of_agents = 1
-agents = [Agent([5 , 1],[randn()*100, randn()*.1, randn()*.01] , 1.0 , 0, id=i + 1) for i in range(num_of_agents)]
+num_of_agents = 5
+agents = [Agent([randn()*100 , randn()*100],[randn()*100, randn()*.1, randn()*.01] , 10.0 , 0, id=i + 1) for i in range(num_of_agents)]
 
 #set filter params:
 dt = .01
 meas_var = [3, 3] # M_squared
-procc_var = 1.
+procc_var = 50.
 
 initial_cov_var = 100.0
 initial_state = array([[0, 0 ,0 , 0]] , dtype='float64').T  # Initial state [x, y]
 initial_covariance = eye(state_dim , dtype='float64') * initial_cov_var  # Initial estimation error covariance - P
-process_variance = diag([0 , 0 , 0 , 1]) * procc_var  # Q Process noise covariance
+process_variance = diag([0 , 1 , 0 , .2]) * procc_var  # Q Process noise covariance
 measurement_variance = diag(meas_var)*1.0  #R Measurement noise covariance
 process_transformation = array([[1, dt , 0 , 0],[0, 1 , 0 , 0] , [0 , 0 , 1 , dt],[0,0,0,1]] , dtype='float64') # F the process transformation matrix
 measurements_transformation = array([[1 , 0 , 0 , 0],[0 , 0, 1 ,0 ]],dtype='float64') # H the measurements transformation matrix
 B = array([[0., 1., 0., 0.2]] , dtype='float64').T * dt # Input matrix
-G = array([[0, 0, 0, 0]] , dtype='float64').T#Dynamic Model Noise
+G = array([[0, .1, 0, .02]] , dtype='float64').T * dt #Dynamic Model Noise
 
 initial_state_X = [0 ,0 ,0]
 initial_state_Y = [0 ,0 ,0]
-input_mat = array([[0. , 1 ,0.0]] , dtype='float64')
-noise_mat = array([[0. ,1.0 ,0.]] , dtype='float64')
+input_mat_X = array([[0., 1, 0.0]] , dtype='float64')
+noise_mat_X = array([[0., .1, 0.]] , dtype='float64')
+input_mat_Y = array([[0., .2, 0.0]] , dtype='float64')
+noise_mat_Y = array([[0., .02, 0.]] , dtype='float64')
 #Check how to start input at certain time.
-T , X = acceleration_model(t_start=0 , t_stop=50 ,initial_cond=initial_state_X, input_type='step',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat, G=noise_mat)
-T , Y = acceleration_model(t_start=0 , t_stop=50,initial_cond=initial_state_Y, input_type='step',input_amplitude=0.2 , model_noise_var= .1 , dt=dt , B=input_mat, G=noise_mat)
+T , X = acceleration_model(t_start=0 , t_stop=50 ,initial_cond=initial_state_X, input_type='dirac',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_X, G=noise_mat_X)
+T , Y = acceleration_model(t_start=0 , t_stop=50,initial_cond=initial_state_Y, input_type='step',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_Y, G=noise_mat_Y)
 
-# plt.figure()
-# plt.plot(T,X[2])
-# plt.show()
+plt.figure()
+plt.plot(T,X[1])
+plt.show()
 u = input('step' , T , 1)
 # uy = input('step' , T , 1)
 # uz =
@@ -74,12 +76,12 @@ for agent in agents:
 
         #update
         agent.filt.update(expand_dims(measurement, axis=1), agent.filt.R * agent.noise_factor(measurement))  # feeding the update with measurement cov*distance factor
-    agent.filt.R_update_arr = agent.filt.R_update_arr.reshape(len(X[0]) ,measurement_dim  ,measurement_dim )
-    agent.filt.R_pred_arr = agent.filt.R_pred_arr.reshape(len(X[0]),measurement_dim , measurement_dim )
+    agent.filt.R_arr = agent.filt.R_arr.reshape(len(X[0]) ,measurement_dim  ,measurement_dim )
     agent.filt.updated_covs = agent.filt.updated_covs.reshape(len(X[0]),state_dim ,state_dim )
     agent.filt.updated_state= agent.filt.updated_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_state = agent.filt.predicted_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_covs = agent.filt.predicted_covs.reshape(len(X[0]),state_dim ,state_dim )
+    agent.filt.residual = agent.measurements - a
     # for agent in agents:
     #     if agent.catch_flag == 0:
     #         # predict
@@ -92,6 +94,7 @@ for agent in agents:
 # res = noisy_measurements_org[0] - squeeze(agent.filt.updated_state)[:,0]
 #PLOTS
 for agent in agents:
+    #plot X X'
     plt.figure()
     plt.plot(T ,squeeze(agent.filt.updated_state)[:,0],'r' ,T , squeeze(agent.filt.updated_state)[:,1], 'b')
     plt.plot(T ,X[0] ,'--r', T  , X[1] ,'--b')
@@ -105,14 +108,14 @@ for agent in agents:
     plt.ylabel('amplitude')
     plt.show()
 
+    #plot Y Y'
     plt.figure()
     plt.plot(T ,squeeze(agent.filt.updated_state)[:,2],'r' ,T , squeeze(agent.filt.updated_state)[:,3], 'b')
     plt.plot(T ,Y[0] ,'--r', T  , Y[1] ,'--b')
     plt.plot(agent.position[0] , agent.position[1] , '*g')
-
     # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
-    plt.fill_between(T , X[0] + agent.filt.updated_covs[:,0,0]**.5 , X[0] - agent.filt.updated_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
-    plt.fill_between(T ,  X[1] + agent.filt.updated_covs[:,1,1]**.5 , X[1] - agent.filt.updated_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.fill_between(T , Y[0] + agent.filt.updated_covs[:, 2, 2]**.5 , Y[0] - agent.filt.updated_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.fill_between(T ,  Y[1] + agent.filt.updated_covs[:, 3, 3]**.5 , Y[1] - agent.filt.updated_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     # plt.fill_between(T,X[2] + squeeze(agent.filt.updated_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.updated_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     plt.legend(['Y estimation' , 'Y\' estimation', 'Y real' , 'Y\' real' , 'sensor position'])
     plt.title(f'agent {agent.id} Y state estimation and measurements')
@@ -120,6 +123,9 @@ for agent in agents:
     plt.ylabel('amplitude')
     plt.show()
 
+    #plot res
+    plt.figure()
+    plt.plot()
 
 #plot agent position
 plt.figure()
@@ -144,3 +150,13 @@ plt.title('state estimation and measurements')
 plt.xlabel('time')
 plt.ylabel('amplitude')
 print('done')
+#The measurements are fixing the covariance of the positions but not the velocities
+"""
+When the Kalman filter is of higher order than your physical process it also has an infinite number of solutions to choose from. The answer is not just non-optimal, it often diverges and never recovers.
+
+For best performance you need a filter whose order matches the system's order.
+
+For best performance you need a filter whose order matches the system's order. In many cases that will be easy to do - if you are designing a Kalman filter to read the thermometer of a freezer it seems clear that a zero order filter is the right choice. But what order should we use if we are tracking a car? Order one will work well while the car is moving in a straight line at a constant speed, but cars turn, speed up, and slow down, in which case a second order filter will perform better. That is the problem addressed in the Adaptive Filters chapter. There we will learn how to design a filter that adapts to changing order in the tracked object's behavior.
+
+With that said, a lower order filter can track a higher order process so long as you add enough process noise and you keep the discretization period small (100 samples a second are usually locally linear). The results will not be optimal, but they can still be very good, and I always reach for this tool first before trying an adaptive filter
+"""

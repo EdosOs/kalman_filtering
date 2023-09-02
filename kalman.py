@@ -17,8 +17,7 @@ class KalmanFilter:
         self.updated_state = array([] , dtype='float64')
         self.updated_covs = array([] , dtype='float64')
         self.predicted_covs = array([] , dtype='float64')
-        self.R_update_arr = array([] , dtype='float64')
-        self.R_pred_arr = array([] , dtype='float64')
+        self.R_arr = array([] , dtype='float64')
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
         self.state = self.F @ self.state + self.B * self.u  # u is not present in the P_pred because it is deterministic
         self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
@@ -37,7 +36,7 @@ class KalmanFilter:
         # self.P = self.P - K @ self.H @ self.P # posterior cov
         self.updated_state = np.append(self.updated_state , self.state.copy())
         self.updated_covs = np.append(self.updated_covs , self.P.copy())
-        self.R_update_arr = np.append(self.R_update_arr , R)
+        self.R_arr = np.append(self.R_arr , R)
         return self.state #POSTIERIOR X(k+1|k+1)
     def add_predicted_state(self ,predicted_state, predicted_covs):
         return self.predicted_state.append(predicted_state) , self.predicted_covs.append(predicted_covs)
