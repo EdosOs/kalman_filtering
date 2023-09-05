@@ -18,7 +18,9 @@ agents = [Agent([randn()*100 , randn()*100],[randn()*100, randn()*.1, randn()*.0
 dt = .01
 meas_var = [3, 3] # M_squared
 procc_var = 50.
-
+'''
+Divide the kalman for each uncorrelated state o improve preformance
+'''
 initial_cov_var = 100.0
 initial_state = array([[0, 0 ,0 , 0]] , dtype='float64').T  # Initial state [x, y]
 initial_covariance = eye(state_dim , dtype='float64') * initial_cov_var  # Initial estimation error covariance - P
@@ -32,16 +34,16 @@ G = array([[0, .1, 0, .02]] , dtype='float64').T * dt #Dynamic Model Noise
 initial_state_X = [0 ,0 ,0]
 initial_state_Y = [0 ,0 ,0]
 input_mat_X = array([[0., 1, 0.0]] , dtype='float64')
-noise_mat_X = array([[0., .1, 0.]] , dtype='float64')
+noise_mat_X = array([[0., 0, 0.]] , dtype='float64')
 input_mat_Y = array([[0., .2, 0.0]] , dtype='float64')
-noise_mat_Y = array([[0., .02, 0.]] , dtype='float64')
+noise_mat_Y = array([[0., 0, 0.]] , dtype='float64')
 #Check how to start input at certain time.
-T , X = acceleration_model(t_start=0 , t_stop=50 ,initial_cond=initial_state_X, input_type='dirac',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_X, G=noise_mat_X)
+T , X = acceleration_model(t_start=0 , t_stop=50 ,initial_cond=initial_state_X ,  input_type='pulse',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_X, G=noise_mat_X)
 T , Y = acceleration_model(t_start=0 , t_stop=50,initial_cond=initial_state_Y, input_type='step',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_Y, G=noise_mat_Y)
 
-plt.figure()
-plt.plot(T,X[1])
-plt.show()
+# plt.figure()
+# plt.plot(T,X[1])
+# plt.show()
 u = input('step' , T , 1)
 # uy = input('step' , T , 1)
 # uz =
@@ -55,11 +57,11 @@ u = input('step' , T , 1)
 # X = sol.y #STATE , STATE_DOT
 # u = input('step' , T , 1)
 
-# # plot
+# plot
 # plt.figure()
 # plt.plot(T , X[0])
-# plt.plot(T , X[1])
-# plt.plot(T , X[2])
+# # plt.plot(T , X[1])
+# # plt.plot(T , X[2])
 # plt.legend(['x' , 'x_dot' , 'x_ddot'])
 # plt.show()
 
@@ -81,7 +83,15 @@ for agent in agents:
     agent.filt.updated_state= agent.filt.updated_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_state = agent.filt.predicted_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_covs = agent.filt.predicted_covs.reshape(len(X[0]),state_dim ,state_dim )
-    agent.filt.residual = agent.measurements - a
+    # Ground thruth : X_tilde = X_real - X_estimated
+    agent.filt.estimation_error = [X[0] - agent.filt.updated_state[:, 0] , X[1] - agent.filt.updated_state[:, 1]]
+    # NEES (Normalized Estimated Error Squared ) : err = X_tilde.T @ P^-1 @ X_tilde
+    '''The math is outside the scope of this book, but a random variable in the form  𝐱̃ 𝖳𝐏−1𝐱̃ 
+  is said to be chi-squared distributed with n degrees of freedom, and thus the expected value of the sequence should be  𝑛
+ . Bar-Shalom [1] has an excellent discussion of this topic.'''
+
+
+                            # agent.filt.residual = agent.measurements - a
     # for agent in agents:
     #     if agent.catch_flag == 0:
     #         # predict
@@ -92,16 +102,21 @@ for agent in agents:
     #             continue
     #         agent.move(agent_measurement / 2)
 # res = noisy_measurements_org[0] - squeeze(agent.filt.updated_state)[:,0]
+
+
+
+
+
 #PLOTS
 for agent in agents:
     #plot X X'
-    plt.figure()
-    plt.plot(T ,squeeze(agent.filt.updated_state)[:,0],'r' ,T , squeeze(agent.filt.updated_state)[:,1], 'b')
-    plt.plot(T ,X[0] ,'--r', T  , X[1] ,'--b')
-    plt.plot(agent.position[0] , agent.position[1] , '*g')
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.plot(T ,squeeze(agent.filt.updated_state)[:,0],'r' ,T , squeeze(agent.filt.updated_state)[:,1], 'b')
+    ax.plot(T ,X[0] ,'--r', T  , X[1] ,'--b')
+    ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
     # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
-    plt.fill_between(T , X[0] + agent.filt.updated_covs[:,0,0]**.5 , X[0] - agent.filt.updated_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
-    plt.fill_between(T ,  X[1] + agent.filt.updated_covs[:,1,1]**.5 , X[1] - agent.filt.updated_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T , X[0] + agent.filt.updated_covs[:,0,0]**.5 , X[0] - agent.filt.updated_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  X[1] + agent.filt.updated_covs[:,1,1]**.5 , X[1] - agent.filt.updated_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     plt.legend(['X estimation' , 'X\' estimation', 'X real' , 'X\' real' ,'sensor position'])
     plt.title(f'agent {agent.id} X state estimation and measurements')
     plt.xlabel('time')
