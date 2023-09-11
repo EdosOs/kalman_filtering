@@ -4,85 +4,90 @@ from numpy import expand_dims ,squeeze , array , diag , eye , linspace
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import pandas as pd
-from kalman import KalmanFilter , Gaussian , add_gaussian_noise
+from kalman import KalmanFilter , KalmanFilterInfo , UnscentedKalmanFilter , Gaussian , add_gaussian_noise
 from control import input
 from agent import Agent
 from ode import acceleration_model , velocity_model
+from noise_modeling import velocity_model_noise , acceleration_model_noise
+
 # define agents
+agent_measurement_noise_factor = 50
 state_dim = 4
 measurement_dim = 2
-num_of_agents = 5
-agents = [Agent([randn()*100 , randn()*100],[randn()*100, randn()*.1, randn()*.01] , 10.0 , 0, id=i + 1) for i in range(num_of_agents)]
+num_of_agents = 4
+agent_positions = [[0 , 0] ,[35, 0] , [0 , 30] , [30 , 30]]
+agents = [Agent([agent_positions[i][0], agent_positions[i][1]],[randn()*0, randn()*0, randn()*0] , 1 , 0, id=i + 1) for i in range(num_of_agents)]
 
 #set filter params:
-dt = .01
-meas_var = [3, 3] # M_squared
-procc_var = 50.
+dt = 1.
+meas_var = np.array([1., 1.]) # M_squared
+process_noise_factor = 1
+Q = velocity_model_noise(std=process_noise_factor ,dt=dt)
 '''
 Divide the kalman for each uncorrelated state o improve preformance
 '''
-initial_cov_var = 100.0
-initial_state = array([[0, 0 ,0 , 0]] , dtype='float64').T  # Initial state [x, y]
-initial_covariance = eye(state_dim , dtype='float64') * initial_cov_var  # Initial estimation error covariance - P
-process_variance = diag([0 , 1 , 0 , .2]) * procc_var  # Q Process noise covariance
-measurement_variance = diag(meas_var)*1.0  #R Measurement noise covariance
-process_transformation = array([[1, dt , 0 , 0],[0, 1 , 0 , 0] , [0 , 0 , 1 , dt],[0,0,0,1]] , dtype='float64') # F the process transformation matrix
-measurements_transformation = array([[1 , 0 , 0 , 0],[0 , 0, 1 ,0 ]],dtype='float64') # H the measurements transformation matrix
-B = array([[0., 1., 0., 0.2]] , dtype='float64').T * dt # Input matrix
-G = array([[0, .1, 0, .02]] , dtype='float64').T * dt #Dynamic Model Noise
 
-initial_state_X = [0 ,0 ,0]
-initial_state_Y = [0 ,0 ,0]
-input_mat_X = array([[0., 1, 0.0]] , dtype='float64')
+x_acc_factor = .05
+y_acc_factor = .02
+
+initial_state = array([[1, 0 ,1 , 0]] , dtype='float64').T  # Initial state [x, y]
+P = eye(state_dim , dtype='float64') * 10.0  # Initial estimation error covariance - P
+Q = array([[0. , .1 , 0. , .1]]).T *process_noise_factor @ array([[0. , .1 , 0. , .1]])*dt  # Q Process noise covariance
+R = diag(meas_var)  #R Measurement noise covariance
+F = array([[1, dt , 0 , 0],[0, 1 , 0 , 0] , [0 , 0 , 1 , dt],[0,0,0,1]] , dtype='float64') # F the process transformation matrix
+H = array([[1 , 0 , 0 , 0],[0 , 0, 1 ,0 ]],dtype='float64') # H the measurements transformation matrix
+B = array([[0., x_acc_factor, 0., y_acc_factor]] , dtype='float64').T * dt # Input matrix
+G = array([[0, .0, 0, .0]] , dtype='float64').T * dt #Dynamic Model Noise
+
+initial_state_X = [1 ,0 ,0]
+initial_state_Y = [1 ,0 ,0]
+input_mat_X = array([[0., x_acc_factor, 0.0]] , dtype='float64')
 noise_mat_X = array([[0., 0, 0.]] , dtype='float64')
-input_mat_Y = array([[0., .2, 0.0]] , dtype='float64')
+input_mat_Y = array([[0., y_acc_factor, 0.0]] , dtype='float64')
 noise_mat_Y = array([[0., 0, 0.]] , dtype='float64')
 #Check how to start input at certain time.
-T , X = acceleration_model(t_start=0 , t_stop=50 ,initial_cond=initial_state_X ,  input_type='pulse',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_X, G=noise_mat_X)
-T , Y = acceleration_model(t_start=0 , t_stop=50,initial_cond=initial_state_Y, input_type='step',input_amplitude=1 , model_noise_var= .1 , dt=dt , B=input_mat_Y, G=noise_mat_Y)
+T , X = acceleration_model(t_start=0 , t_stop=300 ,initial_cond=initial_state_X ,  input_type='sin',model_noise_var = .1,input_amplitude=1, dt=dt , B=input_mat_X, G=noise_mat_X)
+T , Y = acceleration_model(t_start=0 , t_stop=300,initial_cond=initial_state_Y, input_type='sin',model_noise_var = .1,input_amplitude=1 , dt=dt , B=input_mat_Y, G=noise_mat_Y)
+u = input('sin' , T , 1)
 
-# plt.figure()
-# plt.plot(T,X[1])
-# plt.show()
-u = input('step' , T , 1)
-# uy = input('step' , T , 1)
-# uz =
-# #Dynamic model
-# #enter equations from order 1 as parameters
-# model_noise_var = 1
-# t_span = [0, 10]
-# ode_fcn = lambda T,X: [X[1]+X[2]*T,X[2] , 0] + squeeze(B , axis=1) * input('step' , T , 1) + squeeze(G , axis=1) * randn() * model_noise_var
-# sol = solve_ivp (ode_fcn, t_span=t_span  ,y0=[0, 0, 1] ,t_eval=linspace(0 , 10 , 100))
-# T = sol.t
-# X = sol.y #STATE , STATE_DOT
-# u = input('step' , T , 1)
+
 
 # plot
 # plt.figure()
 # plt.plot(T , X[0])
-# # plt.plot(T , X[1])
-# # plt.plot(T , X[2])
+# plt.plot(T , X[1])
+# plt.plot(T , X[2])
 # plt.legend(['x' , 'x_dot' , 'x_ddot'])
 # plt.show()
 
-# noisy_measurements = add_gaussian_noise(array([X[0],Y[0]])  , 0 , meas_var)
-# noisy_measurements_org = noisy_measurements.copy()
+
 for agent in agents:
-    agent.filt = KalmanFilter(x0 = initial_state,P =  initial_covariance,Q =  process_variance,R =  measurement_variance ,F = process_transformation , B = B , H = measurements_transformation ,u = u,dt = dt  )
+    agent.filt = KalmanFilterInfo(x0 = initial_state,P =  P,Q =  Q,R =  R ,F = F , B = B , H = H ,u = u,dt = dt ,G=G )
 #initialize arrays for storing state
-for agent in agents:
-    for real_measurement in array([X[0],Y[0]]).T:
+for real_measurement in array([X[0],Y[0]]).T:
+    for agent in agents:
+        # print(agent.id)
         measurement = agent.measure(real_measurement) # sensor measuring using real data
+
         #prediction
         agent.filt.prediction()
 
         #update
-        agent.filt.update(expand_dims(measurement, axis=1), agent.filt.R * agent.noise_factor(measurement))  # feeding the update with measurement cov*distance factor
-    agent.filt.R_arr = agent.filt.R_arr.reshape(len(X[0]) ,measurement_dim  ,measurement_dim )
+        agent.filt.update(expand_dims(measurement, axis=1), agent.filt.R + np.eye(2)*agent.calc_distance(real_measurement)/agent_measurement_noise_factor)  # feeding the update with measurement cov*distance factor
+        agent.update_agent_measurement_noise(agent.calc_distance(real_measurement)/agent_measurement_noise_factor)
+    # for agent in agents:
+    #     agent.filt.assimilate(agents)
+    #     agent.filt.assim_covs = agent.filt.assim_covs.reshape(len(X[0]), state_dim, state_dim)
+    #     agent.filt.assim_state = agent.filt.assim_state.reshape(len(X[0]), state_dim)
+
+    # rearrange data
+for agent in agents:
+
     agent.filt.updated_covs = agent.filt.updated_covs.reshape(len(X[0]),state_dim ,state_dim )
     agent.filt.updated_state= agent.filt.updated_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_state = agent.filt.predicted_state.reshape(len(X[0]) ,state_dim )
     agent.filt.predicted_covs = agent.filt.predicted_covs.reshape(len(X[0]),state_dim ,state_dim )
+    agent.filt.R_arr = agent.filt.R_arr.reshape(len(X[0]) ,measurement_dim  ,measurement_dim )
     # Ground thruth : X_tilde = X_real - X_estimated
     agent.filt.estimation_error = [X[0] - agent.filt.updated_state[:, 0] , X[1] - agent.filt.updated_state[:, 1]]
     # NEES (Normalized Estimated Error Squared ) : err = X_tilde.T @ P^-1 @ X_tilde
@@ -91,17 +96,32 @@ for agent in agents:
  . Bar-Shalom [1] has an excellent discussion of this topic.'''
 
 
-                            # agent.filt.residual = agent.measurements - a
-    # for agent in agents:
-    #     if agent.catch_flag == 0:
-    #         # predict
-    #         agent_measurement = agent.measure(measurement)
-    #         # update
-    #         if abs(agent_measurement)<1:
-    #             agent.catch_flag = 1
-    #             continue
-    #         agent.move(agent_measurement / 2)
-# res = noisy_measurements_org[0] - squeeze(agent.filt.updated_state)[:,0]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -109,35 +129,320 @@ for agent in agents:
 
 #PLOTS
 for agent in agents:
-    #plot X X'
-    ax = plt.figure().add_subplot(projection='3d')
-    ax.plot(T ,squeeze(agent.filt.updated_state)[:,0],'r' ,T , squeeze(agent.filt.updated_state)[:,1], 'b')
-    ax.plot(T ,X[0] ,'--r', T  , X[1] ,'--b')
-    ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+    #plot X
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,0],'r' )
+    ax.plot(T ,X[0] ,'--r')
+    # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    plt.fill_between(T , X[0] + agent.filt.assim_covs[:,0,0]**.5 , X[0] - agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'white' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  X[1] + agent.filt.assim_covs[:,1,1]**.5 , X[1] - agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['X estimation' ,  'X real'])
+    plt.title(f'agent {agent.id} X state estimation (Assimilation) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+    #plot X'
+    ax = plt.figure().add_subplot()
+    ax.plot(T , squeeze(agent.filt.assim_state)[:,1], 'b')
+    ax.plot(T , X[1] ,'--b')
+    # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , X[0] + agent.filt.assim_covs[:,0,0]**.5 , X[0] - agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.fill_between(T ,  X[1] + agent.filt.assim_covs[:,1,1]**.5 , X[1] - agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend([ 'X\' estimation', 'X\' real' ])
+    plt.title(f'agent {agent.id} X state estimation (Assimilation) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+for agent in agents:
+
+    #plot Y
+    plt.figure()
+    plt.plot(T ,squeeze(agent.filt.assim_state)[:,2],'r')
+    plt.plot(T ,Y[0] ,'--r')
+    # plt.plot(agent.position[0] , agent.position[1] , '*g')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    plt.fill_between(T , Y[0] + agent.filt.assim_covs[:, 2, 2]**.5 , Y[0] - agent.filt.assim_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  Y[1] + agent.filt.assim_covs[:, 3, 3]**.5 , Y[1] - agent.filt.assim_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T,X[2] + squeeze(agent.filt.assim_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.assim_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['Y estimation' , 'Y\' estimation', 'Y real' , 'Y\' real' , 'sensor position'])
+    plt.title(f'agent {agent.id} Y state estimation(Assimilation) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+    # plot Y'
+    plt.figure()
+    plt.plot(T ,squeeze(agent.filt.assim_state)[:,3],'b')
+    plt.plot(T ,Y[1] ,'--b')
+    # plt.plot(agent.position[0] , agent.position[1] , '*g')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , Y[0] + agent.filt.assim_covs[:, 2, 2]**.5 , Y[0] - agent.filt.assim_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  Y[1] + agent.filt.assim_covs[:, 3, 3]**.5 , Y[1] - agent.filt.assim_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T,X[2] + squeeze(agent.filt.assim_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.assim_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['Y estimation' , 'Y\' estimation', 'Y real' , 'Y\' real' , 'sensor position'])
+    plt.title(f'agent {agent.id} Y state estimation(Assimilation) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+#Update
+for agent in agents:
+    #plot X
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.updated_state)[:,0],'r' )
+    ax.plot(T ,X[0] ,'--r')
+    # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , X[0] + agent.filt.updated_covs[:,0,0]**.5 , X[0] - agent.filt.updated_covs[:,0,0]**.5 ,facecolor = 'white' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  X[1] + agent.filt.updated_covs[:,1,1]**.5 , X[1] - agent.filt.updated_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['X estimation' ,  'X real'])
+    plt.title(f'agent {agent.id} X state estimation (updated) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+for agent in agents:
+
+    #plot X'
+    ax = plt.figure().add_subplot()
+    ax.plot(T , squeeze(agent.filt.updated_state)[:,1], 'b')
+    ax.plot(T , X[1] ,'--b')
+    # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
     # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
     # plt.fill_between(T , X[0] + agent.filt.updated_covs[:,0,0]**.5 , X[0] - agent.filt.updated_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     # plt.fill_between(T ,  X[1] + agent.filt.updated_covs[:,1,1]**.5 , X[1] - agent.filt.updated_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
-    plt.legend(['X estimation' , 'X\' estimation', 'X real' , 'X\' real' ,'sensor position'])
-    plt.title(f'agent {agent.id} X state estimation and measurements')
+    plt.legend([ 'X\' estimation', 'X\' real' ])
+    plt.title(f'agent {agent.id} X state estimation (updated) and measurements')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
 
-    #plot Y Y'
+for agent in agents:
+    #plot Y
     plt.figure()
-    plt.plot(T ,squeeze(agent.filt.updated_state)[:,2],'r' ,T , squeeze(agent.filt.updated_state)[:,3], 'b')
-    plt.plot(T ,Y[0] ,'--r', T  , Y[1] ,'--b')
-    plt.plot(agent.position[0] , agent.position[1] , '*g')
+    plt.plot(T ,squeeze(agent.filt.updated_state)[:,2],'r')
+    plt.plot(T ,Y[0] ,'--r')
+    # plt.plot(agent.position[0] , agent.position[1] , '*g')
     # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
-    plt.fill_between(T , Y[0] + agent.filt.updated_covs[:, 2, 2]**.5 , Y[0] - agent.filt.updated_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
-    plt.fill_between(T ,  Y[1] + agent.filt.updated_covs[:, 3, 3]**.5 , Y[1] - agent.filt.updated_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T , Y[0] + agent.filt.updated_covs[:, 2, 2]**.5 , Y[0] - agent.filt.updated_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  Y[1] + agent.filt.updated_covs[:, 3, 3]**.5 , Y[1] - agent.filt.updated_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     # plt.fill_between(T,X[2] + squeeze(agent.filt.updated_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.updated_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     plt.legend(['Y estimation' , 'Y\' estimation', 'Y real' , 'Y\' real' , 'sensor position'])
-    plt.title(f'agent {agent.id} Y state estimation and measurements')
+    plt.title(f'agent {agent.id} Y state estimation(updated) and measurements')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
 
+
+    # plot Y'
+    plt.figure()
+    plt.plot(T ,squeeze(agent.filt.updated_state)[:,3],'b')
+    plt.plot(T ,Y[1] ,'--b')
+    # plt.plot(agent.position[0] , agent.position[1] , '*g')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , Y[0] + agent.filt.updated_covs[:, 2, 2]**.5 , Y[0] - agent.filt.updated_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  Y[1] + agent.filt.updated_covs[:, 3, 3]**.5 , Y[1] - agent.filt.updated_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T,X[2] + squeeze(agent.filt.updated_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.updated_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['Y estimation' , 'Y\' estimation', 'Y real' , 'Y\' real' , 'sensor position'])
+    plt.title(f'agent {agent.id} Y state estimation(updated) and measurements')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+for agent in agents:
+    #error Assim X
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,0] - X[0],'r' )
+    plt.plot(T, agent.filt.assim_covs[:, 0, 0] ** .5,'--k')
+    plt.plot(T, -agent.filt.assim_covs[:, 0, 0] ** .5,'--k')
+    # plt.fill_between(T ,agent.filt.assim_covs[:,0,0]**.5 , -agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['X' ,  '1 Sigma envelope'])
+    plt.title(f'agent {agent.id} X Position (Assimilation) Errors')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+    for agent in agents:
+        # plot X
+        ax = plt.figure().add_subplot()
+        ax.plot(T, squeeze(agent.filt.assim_state)[:, 0], 'r')
+        ax.plot(T, X[0], '--r')
+        # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+        # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+        plt.fill_between(T, X[0] + agent.filt.assim_covs[:, 0, 0] ** .5, X[0] - agent.filt.assim_covs[:, 0, 0] ** .5,
+                         facecolor='white', alpha=.2, edgecolor='black')
+        # plt.fill_between(T ,  X[1] + agent.filt.assim_covs[:,1,1]**.5 , X[1] - agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.legend(['X estimation', 'X real'])
+        plt.title(f'agent {agent.id} X state estimation (Assimilation) and measurements')
+        plt.xlabel('time')
+        plt.ylabel('amplitude')
+        plt.show()
+
+        # plot X'
+        ax = plt.figure().add_subplot()
+        ax.plot(T, squeeze(agent.filt.assim_state)[:, 1], 'b')
+        ax.plot(T, X[1], '--b')
+        # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+        # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+        # plt.fill_between(T , X[0] + agent.filt.assim_covs[:,0,0]**.5 , X[0] - agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.fill_between(T, X[1] + agent.filt.assim_covs[:, 1, 1] ** .5, X[1] - agent.filt.assim_covs[:, 1, 1] ** .5,
+                         facecolor='yellow', alpha=.2, edgecolor='black')
+        plt.legend(['X\' estimation', 'X\' real'])
+        plt.title(f'agent {agent.id} X state estimation (Assimilation) and measurements')
+        plt.xlabel('time')
+        plt.ylabel('amplitude')
+        plt.show()
+
+        # plot Y
+        plt.figure()
+        plt.plot(T, squeeze(agent.filt.assim_state)[:, 2], 'r')
+        plt.plot(T, Y[0], '--r')
+        # plt.plot(agent.position[0] , agent.position[1] , '*g')
+        # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+        plt.fill_between(T, Y[0] + agent.filt.assim_covs[:, 2, 2] ** .5, Y[0] - agent.filt.assim_covs[:, 2, 2] ** .5,
+                         facecolor='yellow', alpha=.2, edgecolor='black')
+        # plt.fill_between(T ,  Y[1] + agent.filt.assim_covs[:, 3, 3]**.5 , Y[1] - agent.filt.assim_covs[:, 3, 3]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        # plt.fill_between(T,X[2] + squeeze(agent.filt.assim_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.assim_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.legend(['Y estimation', 'Y\' estimation', 'Y real', 'Y\' real', 'sensor position'])
+        plt.title(f'agent {agent.id} Y state estimation(Assimilation) and measurements')
+        plt.xlabel('time')
+        plt.ylabel('amplitude')
+        plt.show()
+
+        # plot Y'
+        plt.figure()
+        plt.plot(T, squeeze(agent.filt.assim_state)[:, 3], 'b')
+        plt.plot(T, Y[1], '--b')
+        # plt.plot(agent.position[0] , agent.position[1] , '*g')
+        # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+        # plt.fill_between(T , Y[0] + agent.filt.assim_covs[:, 2, 2]**.5 , Y[0] - agent.filt.assim_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.fill_between(T, Y[1] + agent.filt.assim_covs[:, 3, 3] ** .5, Y[1] - agent.filt.assim_covs[:, 3, 3] ** .5,
+                         facecolor='yellow', alpha=.2, edgecolor='black')
+        # plt.fill_between(T,X[2] + squeeze(agent.filt.assim_covs)[:,2]**.5 , X[2] - squeeze(agent.filt.assim_covs)[:,2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.legend(['Y estimation', 'Y\' estimation', 'Y real', 'Y\' real', 'sensor position'])
+        plt.title(f'agent {agent.id} Y state estimation(Assimilation) and measurements')
+        plt.xlabel('time')
+        plt.ylabel('amplitude')
+        plt.show()
+
+    for agent in agents:
+        # error Assim X
+        ax = plt.figure().add_subplot()
+        ax.plot(T, squeeze(agent.filt.assim_state)[:, 0] - X[0], 'r')
+        plt.plot(T, agent.filt.assim_covs[:, 0, 0] ** .5, '--k')
+        plt.plot(T, -agent.filt.assim_covs[:, 0, 0] ** .5, '--k')
+        # plt.fill_between(T ,agent.filt.assim_covs[:,0,0]**.5 , -agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+        plt.legend(['X', '1 Sigma envelope'])
+        plt.title(f'agent {agent.id} X Position (Assimilation) Errors')
+        plt.xlabel('time')
+        plt.ylabel('amplitude')
+        plt.show()
+
+    # Err X'
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,1] - X[1],'r' )
+    plt.plot(T, agent.filt.assim_covs[:, 1, 1] ** .5,'--k')
+    plt.plot(T, -agent.filt.assim_covs[:, 1, 1] ** .5,'--k')
+    # plt.fill_between(T ,agent.filt.assim_covs[:,1,1]**.5 , -agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['X' ,  '1 Sigma envelope'])
+    plt.title(f'agent {agent.id} X Velocity (Assimilation) Errors')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+    # Err Y
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,2] - Y[0],'r' )
+    plt.plot(T, agent.filt.assim_covs[:, 2, 2] ** .5,'--k')
+    plt.plot(T, -agent.filt.assim_covs[:, 2, 2] ** .5,'--k')
+    # plt.fill_between(T ,agent.filt.assim_covs[:,2,2]**.5 , -agent.filt.assim_covs[:,2,2]**.5 ,facecolor = 'white' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['Y' ,  '1 Sigma envelope'])
+    plt.title(f'agent {agent.id} Y position (Assimilation) Errors')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+    # Err Y'
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,3] - Y[1],'r' )
+    plt.plot(T, agent.filt.assim_covs[:, 3, 3] ** .5,'--k')
+    plt.plot(T, -agent.filt.assim_covs[:, 3, 3] ** .5,'--k')
+    # plt.fill_between(T ,agent.filt.assim_covs[:,3,3]**.5 , -agent.filt.assim_covs[:,3,3]**.5 ,facecolor = 'white' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['Y\'' ,  '1 Sigma envelope'])
+    plt.title(f'agent {agent.id} Y velocity (Assimilation) Errors')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+
+
+
+    # Plot XY in 3d
+    ax = plt.figure().add_subplot(projection = '3d')
+    ax.plot(T ,squeeze(agent.filt.assim_state)[:,0] ,squeeze(agent.filt.assim_state)[:,2] , 'b' )
+    ax.plot(T ,X[0] , Y[0] ,'--r')
+    for agent in agents:
+        ax.scatter(T[0] , agent.position[0] ,agent.position[1],'green')
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , X[0] + agent.filt.assim_covs[:,0,0]**.5 , X[0] - agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  X[1] + agent.filt.assim_covs[:,1,1]**.5 , X[1] - agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['estimation', 'real' ,'sensor position'])
+    plt.title(f'agent {agent.id} position estimation (update) and measurements')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('$X$')
+    ax.set_zlabel(r'$Y$')
+    plt.show()
+
+    # Plot XY in 2d
+    ax = plt.figure().add_subplot()
+    ax.plot(squeeze(agent.filt.assim_state)[:,0] ,squeeze(agent.filt.assim_state)[:,2] , 'b' )
+    ax.plot(X[0] , Y[0] ,'--r')
+    for agent in agents:
+        ax.scatter(agent.position[0] ,agent.position[1])
+    # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
+    # plt.fill_between(T , X[0] + agent.filt.assim_covs[:,0,0]**.5 , X[0] - agent.filt.assim_covs[:,0,0]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    # plt.fill_between(T ,  X[1] + agent.filt.assim_covs[:,1,1]**.5 , X[1] - agent.filt.assim_covs[:,1,1]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
+    plt.legend(['estimation', 'real' ,'sensor position'])
+    plt.title(f'agent {agent.id} position estimation (update) and measurements')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    # plt.xlim(-100 , 100)
+    # plt.ylim(-100 , 100)
+    # ax.set_aspect('equal')
+    plt.show()
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     #plot res
     plt.figure()
     plt.plot()

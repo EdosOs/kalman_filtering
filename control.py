@@ -1,5 +1,5 @@
 from numpy import sin , array
-def input(inp_type , t , amplitude , pulse_time = 10 , dt = 5):
+def input(inp_type , t , amplitude , pulse_time = 2 , dt = 2 , delay = 0):
     if inp_type == 'sin':
         return array([amplitude * sin(t)])
     elif inp_type == 'step':

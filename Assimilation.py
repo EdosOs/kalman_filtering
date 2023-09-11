@@ -1,2 +1,2 @@
-def assimilate(agents):
-    for agent in agents:
+# def assimilate(agents):
+#     for agent in agents:
