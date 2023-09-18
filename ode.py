@@ -7,7 +7,8 @@ from control import input
 
 #Dynamic model
 #enter equations from order 1 as parameters
-def acceleration_model(t_start,t_stop,initial_cond,model_noise_var , dt , B , G , input_type = 'sin',input_amplitude = 1):
+def acceleration_model(t_start, t_stop, initial_cond, model_noise_var, dt, B, G, input_type = 'sin',
+                       input_amplitude: object = 1) -> object:
     t_span = [t_start, t_stop]
     ode_fcn = lambda T,X: [X[1]+X[2]*T , X[2] , 0] + squeeze(B , axis=0) * input(input_type , T , input_amplitude) #+ squeeze(G , axis=0) * randn() * model_noise_var
     sol = solve_ivp(ode_fcn, t_span=t_span  ,y0=initial_cond ,t_eval=linspace(t_start , t_stop , int((t_stop-t_start) / dt)+1) )

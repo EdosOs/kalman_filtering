@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from numpy.linalg import inv
 from numpy import array , diag , exp , pi
+from EKF_models import range_measurement_model_2d
+
 # from Assimilation import assimilate
 class KalmanFilter:
     def __init__(self , x0 , P , Q , R , F, B, H, u ,dt , G ): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
@@ -15,12 +17,16 @@ class KalmanFilter:
         self.G = G
         self.u = u
         self.dt = dt
+        self.counter = 0
         self.predicted_state = array([] , dtype='float64')
         self.updated_state = array([] , dtype='float64')
         self.updated_covs = array([] , dtype='float64')
         self.predicted_covs = array([] , dtype='float64')
         self.R_arr = array([] , dtype='float64')
         self.u_arr = array([] , dtype='float64')
+        self.residual_arr = array([] , dtype='float64') # Array for saving the residuals (measurement - H*predicted_state)
+        self.assim_state = array([] , dtype='float64')
+        self.assim_covs = array([] , dtype='float64')
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
         self.state = self.F @ self.state + self.B * self.u  # u is not present in the P_pred because it is deterministic
         self.u_arr = np.append(self.u_arr , self.u.copy())
@@ -44,69 +50,63 @@ class KalmanFilter:
         self.updated_state = np.append(self.updated_state , self.state.copy())
         self.updated_covs = np.append(self.updated_covs , self.P.copy())
         self.R_arr = np.append(self.R_arr , R)
+        self.counter+=1
         return self.state #POSTIERIOR X(k+1|k+1)
-
-
-
-#𝐏=(𝐈−𝐊𝐇)𝐏¯(𝐈−𝐊𝐇)𝖳+𝐊𝐑𝐊𝖳 Joseph
-    # predict
-    # x = F @ x
-    # P = F @ P @ F.T + Q
-# update
-    # S = H @ P @ H.T + R
-    # K = P @ H.T @ inv(S)
-    # y = z - H @ x
-    # x += K @ y
-    # P_update = (I - K @ H) @ P_pred
-
 
 class KalmanFilterInfo(KalmanFilter):
     def __init__(self , x0 , P , Q , R , F, B, H, u, dt , G): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         super().__init__( x0 , P , Q , R , F, B, H, u, dt , G)
-        self.assim_state = array([] , dtype='float64')
-        self.assim_covs = array([] , dtype='float64')
-    def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
-        self.state = np.round(self.F @ self.state + self.B * self.u , 2)#GQGT
-        self.P = np.round(self.F @ self.P @ self.F.T + self.Q , 2)
 
-        self.predicted_state = np.append(self.predicted_state ,np.round( self.state.copy() , 2))
-        self.predicted_covs = np.append(self.predicted_covs ,np.round(self.P.copy(),2))
+    def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
+        self.state = self.F @ self.state + self.B * self.u[self.counter] #GQGT
+        self.P = self.F @ self.P @ self.F.T + self.Q 
+
+        self.predicted_state = np.append(self.predicted_state , self.state.copy())
+        self.predicted_covs = np.append(self.predicted_covs ,self.P.copy())
 
         self.u_arr = np.append(self.u_arr , self.u.copy())
 
-        self.P_pred = np.round(self.P.copy(),2)
-        self.state_pred = np.round(self.state.copy(),2)
+        self.P_pred = self.P.copy()
+        self.state_pred = self.state.copy()
 
     def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
-        # S = self.R + self.H @ self.P @ self.H.T # SYSYEM UNCERTAINTY ( cov of res)
-        R_inv = np.round(inv(R),2)
-        P_inv = np.round(inv(self.P) + self.H.T @ R_inv @ self.H,2)
-        self.P = np.round(inv(P_inv),2)
+        '''
+        note here P_inv is actually updated information matrix.
+        in contrast to the covariance mode kalman filter here we need
+        to calculate the updated covariance matrix first as it is necessary
+        in calculaing the kalman gain (K = P_update*H_transpose*R_inverse)
 
-        y =np.round( measurement - self.H @ self.state,2) #the residual y
-        K =np.round(self.P @ self.H.T @ R_inv,2) # the kalman gain
-        self.state += np.round(K @ y,2) #posterior
+        another important thing to keep in mind is that R is an input of this function only because
+        R is changing , we used changing R like in the article.
+        '''
+        R_inv = inv(R)
+        P_inv = inv(self.P) + self.H.T @ R_inv @ self.H #update covariance
+        self.P = inv(P_inv)
+
+        y = measurement - self.H @ self.state #the residual y
+        K =self.P @ self.H.T @ R_inv # the kalman gain
+        self.state += K @ y #posterior
 
 
         self.P_updated_inv = P_inv.copy()
-        self.update_state = np.round(self.state.copy(), 2)
-        self.updated_state = np.append(self.updated_state , np.round(self.state.copy(),2))
-        self.updated_covs = np.append(self.updated_covs , np.round(self.P.copy(),2))
+        self.update_state = self.state.copy()
+        self.updated_state = np.append(self.updated_state , self.state.copy())
+        self.updated_covs = np.append(self.updated_covs , self.P.copy())
         self.R_arr = np.append(self.R_arr , R)
-    def assimilate(self ,agents ):
-        P_pred_inv = np.array([inv(agent.filt.P_pred.copy()) for agent in agents])
-        P_update_inv = np.array([agent.filt.P_updated_inv.copy() for agent in agents])
-        P_pred_state = np.array([agent.filt.state_pred.copy() for agent in agents])
-        P_update_state = np.array([agent.filt.update_state.copy() for agent in agents])
+    def assimilate(self ,agents):
+        P_pred_inv = np.array([inv(agent.filter.P_pred.copy()) for agent in agents])
+        P_update_inv = np.array([agent.filter.P_updated_inv.copy() for agent in agents])
+        P_pred_state = np.array([agent.filter.state_pred.copy() for agent in agents])
+        P_update_state = np.array([agent.filter.update_state.copy() for agent in agents])
         P_inv_assim = inv(self.P_pred)  + np.sum(P_update_inv - P_pred_inv , axis=0)
 
         self.P =inv(P_inv_assim)
-        self.state = np.round(self.P @ (inv(self.P_pred) @ self.state_pred + np.sum(P_update_inv @ P_update_state - P_pred_inv @ P_pred_state , axis=0)),5)
-        self.assim_state = np.append(self.assim_state ,np.round( self.state.copy() , 2))
-        self.assim_covs = np.append(self.assim_covs ,np.round(self.P.copy(),2))
+        self.state = self.P @ (inv(self.P_pred) @ self.state_pred + np.sum(P_update_inv @ P_update_state - P_pred_inv @ P_pred_state , axis=0))
+        self.assim_state = np.append(self.assim_state , self.state.copy())
+        self.assim_covs = np.append(self.assim_covs ,self.P.copy())
 
-         # self.P = np.round(inv(self.P_pred)  + np.sum(agents_P_inv_updated) - np.sum(agents_P_inv_predicted),2)
-         # self.state =np.round(self.P @ (inv(self.P_pred) @ self.state_pred +   np.array(agents_P_inv_updated)@np.array(agents_states_updated)  -  np.array(agents_P_inv_predicted) @ np.array(agents_states_predicted)),2)
+         # self.P = inv(self.P_pred)  + np.sum(agents_P_inv_updated) - np.sum(agents_P_inv_predicted)
+         # self.state =self.P @ (inv(self.P_pred) @ self.state_pred +   np.array(agents_P_inv_updated)@np.array(agents_states_updated)  -  np.array(agents_P_inv_predicted) @ np.array(agents_states_predicted))
     #𝐏=(𝐈−𝐊𝐇)𝐏¯(𝐈−𝐊𝐇)𝖳+𝐊𝐑𝐊𝖳 Joseph
         # predict
         # x = F @ x
@@ -145,10 +145,8 @@ class UnscentedKalmanFilter(KalmanFilter):
  looks more like an inverted parabola. In such a case we'd probably want to pull the
   sigma points in closer to the mean to avoid sampling in regions where there will never be real data.
     '''
-    def __init__(self , x0 , P , Q , R , F, B, H, u,  fx , hx ,):
+    def __init__(self , x0 , P , Q , R , F, B, H, u):
         super().__init__(x0 , P , Q , R , F, B, H, u)
-        self.fx = fx
-        self.hx = hx
 
     # def generate_sigma_points():
     #     weight_covs = 0
@@ -163,11 +161,39 @@ class UnscentedKalmanFilter(KalmanFilter):
 
     def update(self , measurement):
         return 0
-class extendedKalmanFilter(KalmanFilter):
+class ExtendedKalmanFilter(KalmanFilterInfo):
     def __init__(self , x0 , P , Q , R , F, B, H, u, dt , G): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         super().__init__( x0 , P , Q , R , F, B, H, u, dt , G)
         self.assim_state = array([] , dtype='float64')
         self.assim_covs = array([] , dtype='float64')
+        self.hx = 0
+
+    def model_update(self ,H , hx):
+        self.H, self.hx = H, hx #linearizing the measurement matrix and calulating the relevant measurement from prediction
+
+    def predict_EKF(self):
+        # self.F = df(x,u)/dx
+        pass
+    def update_EKF(self, measurement, R):
+
+        '''setup section'''
+        R_inv = inv(R)
+        P_inv = inv(self.P) + self.H.T @ R_inv @ self.H
+        self.P = inv(P_inv)
+
+        '''calculations section'''
+        y = measurement - self.hx #the residual y
+        K =self.P @ self.H.T @ R_inv # the kalman gain
+        self.state += K @ y #posterior
+
+        '''saving section'''
+        self.P_updated_inv = P_inv.copy()
+        self.update_state = self.state.copy()
+        self.updated_state = np.append(self.updated_state , self.state.copy())
+        self.updated_covs = np.append(self.updated_covs , self.P.copy())
+        self.R_arr = np.append(self.R_arr , R)
+
+
 class Gaussian:
     def __init__(self ,mean , var):
         self.mean = mean

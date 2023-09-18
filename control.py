@@ -3,7 +3,7 @@ def input(inp_type , t , amplitude , pulse_time = 2 , dt = 2 , delay = 0):
     if inp_type == 'sin':
         return array([amplitude * sin(t)])
     elif inp_type == 'step':
-        return array([amplitude * 1])
+        return array([amplitude * (t+1e-12)/(t+1e-12)])
     elif inp_type == 'ramp':
         return array([amplitude * t])
     elif inp_type == 'pulse':

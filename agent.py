@@ -8,6 +8,7 @@ class Agent:
         self.position = position
         self.state = state
         self.measurement_var = measurement_var
+        self.baseline_measurement_var = measurement_var
         self.process_var = process_var
         self.measurements = []
         self.positions = []
@@ -15,7 +16,8 @@ class Agent:
         self.catch_flag = catch_flag
         self.distance_arr = []
     def measure(self , target_real_position):
-        return target_real_position + array([randn() , randn()]) * self.measurement_var
+
+        return target_real_position + randn(target_real_position.shape[0], target_real_position.shape[1]) * self.measurement_var
     def calc_distance(self , target_real_position):
         Real_distance_X = target_real_position[0] - self.position[0]
         Real_distance_Y = target_real_position[1] - self.position[1]
@@ -23,7 +25,7 @@ class Agent:
         self.distance_arr.append(distance)
         return distance
     def update_agent_measurement_noise(self , noise_factor):
-        self.measurement_var *= self.measurement_var*noise_factor
+        self.measurement_var = self.baseline_measurement_var*noise_factor
 
     def move(self , step): #defining the step is needed
         self.state[0] += step + (randn() * self.process_var)
