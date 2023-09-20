@@ -34,6 +34,9 @@ class KalmanFilter:
         self.predicted_state = np.append(self.predicted_state , self.state.copy())
         self.predicted_covs = np.append(self.predicted_covs , self.P.copy())
 
+        self.P_pred = self.P.copy()
+        self.state_pred = self.state.copy()
+
         return self.state , self.state #PRIOR X(k+1|k)
 
     def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
@@ -98,6 +101,7 @@ class KalmanFilterInfo(KalmanFilter):
         P_update_inv = np.array([agent.filter.P_updated_inv.copy() for agent in agents])
         P_pred_state = np.array([agent.filter.state_pred.copy() for agent in agents])
         P_update_state = np.array([agent.filter.update_state.copy() for agent in agents])
+
         P_inv_assim = inv(self.P_pred)  + np.sum(P_update_inv - P_pred_inv , axis=0)
 
         self.P =inv(P_inv_assim)

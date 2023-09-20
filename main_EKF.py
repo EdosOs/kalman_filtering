@@ -30,7 +30,7 @@ simulation_input_amplitude = 1
 simulation_input_type: str = 'step'
 
 # define agents parameters
-measurement_noise_limit_agent = 5.
+measurement_noise_limit_agent = 25.
 noise_factor_agent_coeff = .1
 num_of_agents = 4
 agent_positions = [[0 , 0] ,[35, 0] , [0 , 30] , [30 , 30]]
@@ -45,7 +45,7 @@ y_acc_intensity = .2
 initial_state = array([[1, 0 ,1 , 0]] , dtype='float64').T  # Initial state [x, y]
 P = eye(state_dim , dtype='float64') * 10.0  # Initial estimation error covariance - P
 Q = array([[0. , .1 , 0. , .1]]).T *process_noise_intensity @ array([[0. , .1 , 0. , .1]])*dt  # Q Process noise covariance
-# Q = velocity_model_noise(std=process_noise_intensity ,dt=dt)
+# Q = velocity_model_noise(var=process_noise_intensity**2 ,dt=dt)
 R = eye(measurement_dim , dtype='float64') * meas_var #R Measurement noise covariance
 F = array([[1, dt , 0 , 0],[0, 1 , 0 , 0] , [0 , 0 , 1 , dt],[0,0,0,1]] , dtype='float64') # F the process transformation matrix
 H = array([[1 , 0 , 0 , 0],[0 , 0, 1 ,0 ]],dtype='float64') # H the measurements transformation matrix
@@ -76,6 +76,8 @@ for real_measurement in real_measurements:
 
         measurement = agent.measure(np.expand_dims(real_measurement,0)) # sensor measuring using real data
 
+        #prediction
+        agent.filter.prediction()
 
         #update model
         H, hx = range_measurement_model_2d(state=agent.filter.state, x_index=x_index, y_index=y_index)
@@ -87,12 +89,10 @@ for real_measurement in real_measurements:
         agent.filter.update_EKF(measurement, agent.filter.R + np.eye(1)*noise_factor_agent)  # feeding the update with measurement cov*distance factor
         agent.update_agent_measurement_noise(noise_factor_agent)
 
-        #prediction
-        agent.filter.prediction()
 
 
 
-    # for agent in agents:
+    for agent in agents:
         agent.filter.assimilate(agents)
 
 
@@ -109,3 +109,4 @@ for agent in agents:
     agent.filter.assim_covs = agent.filter.assim_covs.reshape(len(X[0]), state_dim, state_dim)
     agent.filter.assim_state = agent.filter.assim_state.reshape(len(X[0]), state_dim)
 
+print('done')

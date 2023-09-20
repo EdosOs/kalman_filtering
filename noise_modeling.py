@@ -1,15 +1,15 @@
 import numpy as np
-def acceleration_model_noise(std , dt):
+def acceleration_model_noise(var , dt):
     process_mat = np.array([[dt**4/4 , dt**3/2 , dt**2/2], [dt**3/2  , dt**2 , dt] , [dt**2 , dt , 1]])
-    return std *  np.block ([
+    return var *  np.block ([
                     [process_mat , np.zeros([3,3]) , np.zeros([3,3])],
                     [np.zeros([3,3])  , process_mat , np.zeros([3,3])],
                     [np.zeros([3,3])  , process_mat , np.zeros([3,3])]
     ])
 
-def velocity_model_noise(std , dt):
+def velocity_model_noise(var , dt):
     process_mat = np.array([[dt**4/4 , dt**3/2], [dt**3/2  , dt**2]])
-    return std * np.block ([
+    return var * np.block ([
                 [process_mat , np.zeros([2,2])],
                 [np.zeros([2,2])  , process_mat]
                 ])
