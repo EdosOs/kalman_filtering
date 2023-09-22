@@ -2,6 +2,24 @@ import matplotlib.pyplot as plt
 from kalman_attempt_1 import agents,T,X,Y
 from numpy import squeeze
 
+for agent in agents:
+
+    ax = plt.figure().add_subplot()
+    ax.plot(T ,(agent.measurements),'r' )
+    ax.plot(T, (agent.measurements_clean), 'b')
+
+    plt.title(f'agent {agent.id} at position ({agent.position[0,0]},{agent.position[0,1]}) measurements in time')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
+# noisy measurements
+for agent in agents:
+    ax = plt.figure().add_subplot()
+    ax.plot(T, (agent.measurements_clean), 'r')
+    plt.title(f'agent {agent.id} at position ({agent.position[0, 0]},{agent.position[0, 1]}) measurements in time')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.show()
 
 for agent in agents:
     #plot X
@@ -9,7 +27,7 @@ for agent in agents:
     ax.plot(T ,squeeze(agent.filter.updated_state)[:,0],'r' )
     ax.plot(T ,X[0] ,'--r')
     plt.legend(['X estimation' ,  'X real'])
-    plt.title(f'agent {agent.id} at position ({agent.position[0]},{agent.position[1]}) X state estimation (updated) and measurements')
+    plt.title(f'agent {agent.id} at position ({agent.position[0,0]},{agent.position[0,1]}) X state estimation (updated) and measurements')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
@@ -20,7 +38,7 @@ for agent in agents:
     ax.plot(T , squeeze(agent.filter.updated_state)[:,1], 'b')
     ax.plot(T , X[1] ,'--b')
     plt.legend([ 'X\' estimation', 'X\' real' ])
-    plt.title(f'agent {agent.id} at position ({agent.position[0]},{agent.position[1]}) X\' state estimation (updated) and measurements')
+    plt.title(f'agent {agent.id} at position ({agent.position[0,0]},{agent.position[0,1]}) X\' state estimation (updated) and measurements')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()

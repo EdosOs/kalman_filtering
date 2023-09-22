@@ -10,14 +10,18 @@ class Agent:
         self.measurement_var = measurement_var
         self.baseline_measurement_var = measurement_var
         self.process_var = process_var
-        self.measurements = []
         self.positions = []
         self.id = id
         self.catch_flag = catch_flag
         self.distance_arr = []
-    def measure(self , target_real_position):
-
-        return target_real_position + randn(target_real_position.shape[0], target_real_position.shape[1]) * self.measurement_var
+    def measure(self , target_real_position , noise_factor, max_noise):
+        position_real = target_real_position - self.position.T
+        distance_real = (position_real[0,:]**2 + position_real[1,:]**2)**0.5
+        measurement_var_by_distance = distance_real*noise_factor
+        distance_noised = distance_real + (self.baseline_measurement_var + measurement_var_by_distance)**0.5 * randn(*measurement_var_by_distance.shape)
+        self.R_arr = measurement_var_by_distance
+        self.measurements_clean = distance_real
+        self.measurements = distance_noised
     def calc_distance(self , target_real_position):
         Real_distance_X = target_real_position[0] - self.position[0]
         Real_distance_Y = target_real_position[1] - self.position[1]

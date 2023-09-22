@@ -7,6 +7,7 @@ from control import input
 
 #Dynamic model
 #enter equations from order 1 as parameters
+
 def acceleration_model(t_start, t_stop, initial_cond, model_noise_var, dt, B, G, input_type = 'sin',
                        input_amplitude: object = 1) -> object:
     t_span = [t_start, t_stop]
