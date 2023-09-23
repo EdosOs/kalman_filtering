@@ -28,12 +28,13 @@ class KalmanFilter:
         self.assim_state = array([] , dtype='float64')
         self.assim_covs = array([] , dtype='float64')
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
-        self.state = self.F @ self.state + self.B * self.u  # u is not present in the P_pred because it is deterministic
-        self.u_arr = np.append(self.u_arr , self.u.copy())
+        self.state = self.F @ self.state + self.B * self.u[self.counter]  # u is not present in the P_pred because it is deterministic
         self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
+
         self.predicted_state = np.append(self.predicted_state , self.state.copy())
         self.predicted_covs = np.append(self.predicted_covs , self.P.copy())
 
+        self.u_arr = np.append(self.u_arr , self.u.copy())
         self.P_pred = self.P.copy()
         self.state_pred = self.state.copy()
 
@@ -68,7 +69,6 @@ class KalmanFilterInfo(KalmanFilter):
         self.predicted_covs = np.append(self.predicted_covs ,self.P.copy())
 
         self.u_arr = np.append(self.u_arr , self.u.copy())
-
         self.P_pred = self.P.copy()
         self.state_pred = self.state.copy()
 
@@ -179,13 +179,10 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         # self.F = df(x,u)/dx
         pass
     def update_EKF(self, measurement, R):
-        self.P_pred = self.P.copy()
-
-
         S = R + self.H @ self.P @ self.H.T # SYSYEM UNCERTAINTY (cov of res)
         invs =inv(S)
         K =self.P @ self.H.T @ invs # the kalman gain
-        delta_x_estimation = K * (measurement - self.hx) #the residual y
+        delta_x_estimation = K @ (measurement - self.hx) #the residual y
 
         # likelihood = 1/(2*pi*S) * exp(-0.5*y.T @ invs @ y)
 

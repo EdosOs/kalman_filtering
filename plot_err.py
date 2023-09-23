@@ -10,7 +10,7 @@ for agent in agents:
     plt.plot(T, agent.filter.updated_covs[:, 0, 0] ** .5, '--k')
     plt.plot(T, -agent.filter.updated_covs[:, 0, 0] ** .5, '--k')
     plt.legend(['X', '1 Sigma envelope'])
-    plt.title(f'agent {agent.id} at ({agent.position[0]},{agent.position[1]}) X state estimation (updated) Errors')
+    plt.title(f'agent {agent.id} at ({agent.position[0,0]},{agent.position[0,1]}) X state estimation (updated) Errors')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
@@ -58,7 +58,7 @@ for agent in agents:
 for agent in agents:
     ax = plt.figure().add_subplot()
     ax.plot(T, agent.filter.R_arr[:, 0, 0] ,'r')
-    plt.title(f'agent {agent.id} at ({agent.position[0]},{agent.position[1]}) Measurement noise')
+    plt.title(f'agent {agent.id} at ({agent.position[0,0]},{agent.position[0,1]}) Measurement noise')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
@@ -94,7 +94,7 @@ for agent in agents:
     ax = plt.figure().add_subplot()
     ax.plot(T, squeeze(agent.filter.assim_state)[:, 1], 'b')
     ax.plot(T, X[1], '--b')
-    # ax.scatter(T[0] , agent.position[0] ,agent.position[0],'green')
+    # ax.scatter(T[0] , agent.position[0,0] ,agent.position[0,0],'green')
     plt.fill_between(T, X[1] + agent.filter.assim_covs[:, 1, 1] ** .5, X[1] - agent.filter.assim_covs[:, 1, 1] ** .5,
                      facecolor='yellow', alpha=.2, edgecolor='black')
     plt.legend(['X\' estimation', 'X\' real'])
@@ -119,7 +119,7 @@ for agent in agents:
     plt.figure()
     plt.plot(T, squeeze(agent.filter.assim_state)[:, 3], 'b')
     plt.plot(T, Y[1], '--b')
-    # plt.plot(agent.position[0] , agent.position[1] , '*g')
+    # plt.plot(agent.position[0,0] , agent.position[0,1] , '*g')
     # plt.plot(T ,noisy_measurements_org[0] ,'2r',T ,noisy_measurements_org[1] ,'2b',T ,noisy_measurements_org[2] ,'2g',  linewidth = 0.5)
     # plt.fill_between(T , Y[0] + agent.filter.assim_covs[:, 2, 2]**.5 , Y[0] - agent.filter.assim_covs[:, 2, 2]**.5 ,facecolor = 'yellow' , alpha = .2 , edgecolor = 'black')
     plt.fill_between(T, Y[1] + agent.filter.assim_covs[:, 3, 3] ** .5, Y[1] - agent.filter.assim_covs[:, 3, 3] ** .5,
