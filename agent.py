@@ -3,6 +3,7 @@ from numpy.linalg import norm
 from numpy.random import randn
 from numpy import array , abs
 from kalman import add_gaussian_noise
+from math import sqrt
 class Agent:
     def __init__(self ,position, state , measurement_var , process_var , id , catch_flag = 0):
         self.position = position
@@ -14,12 +15,25 @@ class Agent:
         self.id = id
         self.catch_flag = catch_flag
         self.distance_arr = []
-    def measure(self , target_real_position , noise_factor, max_noise):
+    def measure_iteratively(self, real_measurement):
+        return real_measurement + randn() * sqrt(self.measurement_var)
+    def measure(self , target_real_position , noise_factor, noise_limit = np.array([[1,100]])):
         position_real = target_real_position - self.position.T
         distance_real = (position_real[0,:]**2 + position_real[1,:]**2)**0.5
+
         measurement_var_by_distance = distance_real*noise_factor
-        distance_noised = distance_real + (self.baseline_measurement_var + measurement_var_by_distance)**.5 * randn(*measurement_var_by_distance.shape)
-        self.R_arr = measurement_var_by_distance
+        # limit noise
+        # for noise in measurement_var_by_distance:
+        #     if noise > noise_limit[0,1]:
+        #         noise = noise_limit[0,1]
+        #     elif noise < noise_limit[0,0]:
+        #         noise = noise_limit[0,0]
+
+
+        distance_noised = np.abs(distance_real + (self.baseline_measurement_var + measurement_var_by_distance)**.5 * randn(*measurement_var_by_distance.shape))
+        # randn(*measurement_var_by_distance.shape)
+        # distance_noised = distance_real + self.baseline_measurement_var
+        self.R_arr = measurement_var_by_distance + self.baseline_measurement_var
         self.measurements_clean = distance_real
         self.measurements = distance_noised
     def calc_distance(self , target_real_position):

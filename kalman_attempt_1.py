@@ -10,7 +10,7 @@ from agent import Agent
 from ode import acceleration_model , velocity_model
 from position_models import circle , single_circle
 from noise_modeling import velocity_model_noise , acceleration_model_noise
-
+import plots
 # General parameters
 #set filter params:
 state_dim = 4
@@ -24,11 +24,11 @@ t_initial = 0
 t_final = 30
 simulation_process_noise =.1
 simulation_input_amplitude =1
-simulation_input_type: str = 'sin'
+simulation_input_type: str = 'step'
 
 # define agents parameters
 measurement_noise_limit_agent = 5.
-noise_factor_agent_coeff = .1
+noise_factor_agent_coeff = 0.0
 num_of_agents = 4
 agent_positions = np.array([[0 , 0] ,[35, 0] , [0 , 30] , [30 , 30]])
 agents = [Agent([agent_positions[i][0], agent_positions[i][1]],[randn()*0, randn()*0, randn()*0] , 1 , 0, id=i + 1) for i in range(num_of_agents)]
@@ -55,21 +55,21 @@ G = array([[0, .0, 0, .0]] , dtype='float64').T * dt #Dynamic Model Noise
 
 initial_state_X = [1 ,0 ,0]
 initial_state_Y = [1 ,0 ,0]
-input_mat_X = array([[0., 0.0, x_acc_factor]] , dtype='float64')
+input_mat_X = array([[0., x_acc_factor,0.0]] , dtype='float64')
 noise_mat_X = array([[0., 0, 0.]] , dtype='float64')
-input_mat_Y = array([[0., 0, y_acc_factor]] , dtype='float64')
+input_mat_Y = array([[0., y_acc_factor,0.0]] , dtype='float64')
 noise_mat_Y = array([[0., 0, 0.]] , dtype='float64')
 #Check how to start input at certain time.
 T , X = acceleration_model(t_start=t_initial , t_stop=t_final ,initial_cond=initial_state_X,  input_type=simulation_input_type, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude, dt=dt , B=input_mat_X, G=noise_mat_X)
 T , Y = acceleration_model(t_start=t_initial , t_stop=t_final,initial_cond=initial_state_Y, input_type=simulation_input_type, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude , dt=dt , B=input_mat_Y, G=noise_mat_Y)
 u = np.squeeze(input('step' , T , 1))
-plt.figure()
-plt.plot(np.sin(linspace(0,6.28,100)), np.cos(linspace(0,6.28,100)))
-plt.show()
-X , Y = circle(t_start=t_initial,t_stop=t_final,r=10 , dt=dt , inital_position=[10,0])
-plt.figure()
-plt.plot(X[0], Y[0])
-plt.show()
+# plt.figure()
+# plt.plot(np.sin(linspace(0,6.28,100)), np.cos(linspace(0,6.28,100)))
+# plt.show()
+# X , Y = circle(t_start=t_initial,t_stop=t_final,r=10 , dt=dt , inital_position=[10,0])
+# plt.figure()
+# plt.plot(X[0], Y[0])
+# plt.show()
 
 
 # define kalman for each sensor
@@ -80,7 +80,7 @@ for agent in agents:
 #initialize arrays for storing state
 for real_measurement in array([X[0],Y[0]]).T:
     for agent in agents:
-        measurement = agent.measure(real_measurement) # sensor measuring using real data
+        measurement = agent.measure_iteratively(real_measurement) # sensor measuring using real data
 
         #prediction
         agent.filter.prediction()
@@ -88,7 +88,7 @@ for real_measurement in array([X[0],Y[0]]).T:
         #update
         distance_agent = agent.calc_distance(real_measurement)
         noise_factor_agent = distance_agent*noise_factor_agent_coeff if distance_agent*noise_factor_agent_coeff < measurement_noise_limit_agent else measurement_noise_limit_agent
-        agent.filter.update_EKF(expand_dims(measurement, axis=1), agent.filter.R + np.eye(2)*noise_factor_agent)  # feeding the update with measurement cov*distance factor
+        agent.filter.update(expand_dims(measurement, axis=1), agent.filter.R + np.eye(2)*noise_factor_agent)  # feeding the update with measurement cov*distance factor
         agent.update_agent_measurement_noise(noise_factor_agent)
     # for agent in agents:
     #     agent.filter.assimilate(agents)
@@ -113,7 +113,7 @@ and thus the expected value of the sequence should be  𝑛.
 Bar-Shalom [1] has an excellent discussion of this topic.
 '''
 
-
+print('done')
 
 
 

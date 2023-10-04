@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-from numpy.linalg import inv
+from numpy.linalg import inv , solve
 from numpy import array , diag , exp , pi
 from EKF_models import range_measurement_model_2d
+from copy import copy , deepcopy
+from math import sqrt
 
 # from Assimilation import assimilate
 class KalmanFilter:
@@ -18,15 +20,15 @@ class KalmanFilter:
         self.u = u
         self.dt = dt
         self.counter = 0
-        self.predicted_state = array([] , dtype='float64')
-        self.updated_state = array([] , dtype='float64')
-        self.updated_covs = array([] , dtype='float64')
-        self.predicted_covs = array([] , dtype='float64')
+        self.predicted_state = array([x0] , dtype='float64')
+        self.updated_state = array([x0] , dtype='float64')
+        self.updated_covs = array([P] , dtype='float64')
+        self.predicted_covs = array([P] , dtype='float64')
         self.R_arr = array([] , dtype='float64')
         self.u_arr = array([] , dtype='float64')
         self.residual_arr = array([] , dtype='float64') # Array for saving the residuals (measurement - H*predicted_state)
-        self.assim_state = array([] , dtype='float64')
-        self.assim_covs = array([] , dtype='float64')
+        self.assim_state = array([x0] , dtype='float64')
+        self.assim_covs = array([P] , dtype='float64')
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
         self.state = self.F @ self.state + self.B * self.u[self.counter]  # u is not present in the P_pred because it is deterministic
         self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
@@ -37,7 +39,7 @@ class KalmanFilter:
         self.u_arr = np.append(self.u_arr , self.u.copy())
         self.P_pred = self.P.copy()
         self.state_pred = self.state.copy()
-
+        self.counter+=1
         return self.state , self.state #PRIOR X(k+1|k)
 
     def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
@@ -51,26 +53,15 @@ class KalmanFilter:
         self.state += K @ y #posterior
         self.P = (np.eye(len(self.state)) - K@self.H) @ self.P @ (np.eye(len(self.state)) - K@self.H).T + K @ R @ K.T # posterior cov (Joseph)
 
-        self.updated_state = np.append(self.updated_state , self.state.copy())
+        self.updated_state = np.append(self.updated_state , deepcopy(self.state.copy()))
         self.updated_covs = np.append(self.updated_covs , self.P.copy())
         self.R_arr = np.append(self.R_arr , R)
-        self.counter+=1
+
         return self.state #POSTIERIOR X(k+1|k+1)
 
 class KalmanFilterInfo(KalmanFilter):
     def __init__(self , x0 , P , Q , R , F, B, H, u, dt , G): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         super().__init__( x0 , P , Q , R , F, B, H, u, dt , G)
-
-    def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
-        self.state = self.F @ self.state + self.B * self.u[self.counter] #GQGT
-        self.P = self.F @ self.P @ self.F.T + self.Q 
-
-        self.predicted_state = np.append(self.predicted_state , self.state.copy())
-        self.predicted_covs = np.append(self.predicted_covs ,self.P.copy())
-
-        self.u_arr = np.append(self.u_arr , self.u.copy())
-        self.P_pred = self.P.copy()
-        self.state_pred = self.state.copy()
 
     def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
         '''
@@ -179,24 +170,38 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         # self.F = df(x,u)/dx
         pass
     def update_EKF(self, measurement, R):
-        S = R + self.H @ self.P @ self.H.T # SYSYEM UNCERTAINTY (cov of res)
-        invs =inv(S)
-        K =self.P @ self.H.T @ invs # the kalman gain
-        delta_x_estimation = K @ (measurement - self.hx) #the residual y
+        K = self.P @ self.H.T @ np.linalg.solve(self.H @ self.P @ self.H.T + R, np.eye(R.shape[0]))
+        # K = self.P @ self.H.T @ np.linalg.inv(self.H @ self.P @ self.H.T + R)
+        y = (measurement - self.hx)
 
         # likelihood = 1/(2*pi*S) * exp(-0.5*y.T @ invs @ y)
 
-        self.state += delta_x_estimation #posterior
-        self.P = (np.eye(len(self.state)) - K@self.H) @ self.P @ (np.eye(len(self.state)) - K@self.H).T + K @ R @ K.T # posterior cov (Joseph)
+        self.state += K @ [y] #posterior
+        self.P = (np.eye(len(self.state)) - K@self.H) @ self.P @ (np.eye(len(self.state)) - K @ self.H).T + K @ R @ K.T # posterior cov (Joseph)
         P_inv = inv(self.P)
+
+
         self.updated_state = np.append(self.updated_state , self.state.copy())
         self.updated_covs = np.append(self.updated_covs , self.P.copy())
         self.R_arr = np.append(self.R_arr , R)
         self.update_state = self.state.copy()
         self.P_updated_inv = P_inv.copy()
-
+        self.residual_arr = np.append(self.residual_arr , y)
 
         return self.state #POSTIERIOR X(k+1|k+1)
+
+    def range_measurement_model_2d(self, x_index, y_index, agent):
+        '''This function takes range and state x,y and returns the corresponding model matrix H
+        we use X_prediction as the nominal state'''
+        x = self.state[x_index] - agent.position[0, 0]
+        y = self.state[y_index] - agent.position[0, 1]
+        state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        H = np.zeros([1, len(self.state)], dtype='float64')
+        H[0, x_index] = x / state_to_meas_transform
+        H[0, y_index] = y / state_to_meas_transform
+        self.H = H
+        self.hx = state_to_meas_transform
+        return H, state_to_meas_transform
 
 
 class Gaussian:
@@ -215,3 +220,4 @@ def add_gaussian_noise(measurements , mean , var):
         noise.iloc[m] = [(var[m] * np.random.randn() + mean) for i in range(len(measurements[0,:]))]
     noisy_measurements = noise+pd.DataFrame(measurements.copy())
     return array(noisy_measurements , dtype='float64')
+# self.P = (np.eye(len(self.state)) - K@self.H) @ self.P

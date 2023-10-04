@@ -1,16 +1,16 @@
 import matplotlib.pyplot as plt
-from kalman_attempt_1 import agents,T,X,Y
+from main_EKF import agents,T,X,Y , agents_mc
 from numpy import squeeze
-
-for agent in agents:
+run_number = 0
+for agent_idx in range(len(agents)):
     # error X
     # plot X
     ax = plt.figure().add_subplot()
-    ax.plot(T, squeeze(agent.filter.updated_state)[:, 0] - X[0], 'r')
-    plt.plot(T, agent.filter.updated_covs[:, 0, 0] ** .5, '--k')
-    plt.plot(T, -agent.filter.updated_covs[:, 0, 0] ** .5, '--k')
+    ax.plot(T, squeeze(agents_mc[run_number][agent_idx].filter.updated_state)[:, 0] - X[0], 'r')
+    plt.plot(T, agents_mc[run_number][agent_idx].filter.updated_covs[:, 0, 0] ** .5, '--k')
+    plt.plot(T, -agents_mc[run_number][agent_idx].filter.updated_covs[:, 0, 0] ** .5, '--k')
     plt.legend(['X', '1 Sigma envelope'])
-    plt.title(f'agent {agent.id} at ({agent.position[0,0]},{agent.position[0,1]}) X state estimation (updated) Errors')
+    plt.title(f'agent {agents_mc[run_number][agent_idx].id} at ({agents_mc[run_number][agent_idx].position[0,0]},{agents_mc[run_number][agent_idx].position[0,1]}) X state estimation (updated) Errors')
     plt.xlabel('time')
     plt.ylabel('amplitude')
     plt.show()
