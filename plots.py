@@ -124,12 +124,12 @@ def print_assimilated_covariance(mc_number, state_index, agent_range, agents_mc,
         plt.ylabel('amplitude')
         plt.show()
 def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
-                            simulation_measurement_y):
+                            simulation_measurement_y , start_idx):
     for agent_idx in range(agent_range[0], agent_range[1]):
 
             # plot XY
             ax = plt.figure().add_subplot()
-            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
+            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 2], 'r')
             ax.plot(simulation_measurement_x, simulation_measurement_y, '--r')
             ax.plot()
             plt.legend(['X estimation', 'X real'])
@@ -140,13 +140,13 @@ def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
             plt.show()
 
 def print_3d(mc_number, agent_range, agents_mc, simulation_time,
-                            simulation_measurement_x,simulation_measurement_y):
+                            simulation_measurement_x,simulation_measurement_y,start_index):
     for agent_idx in range(agent_range[0], agent_range[1]):
 
         # 3D
         # Plot XY in 3d
         ax = plt.figure().add_subplot(projection='3d')
-        ax.plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'b')
+        ax.plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[start_index:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[start_index:, 2], 'b')
         ax.plot(simulation_time, simulation_measurement_x, simulation_measurement_y, '--r')
         # for agent_idx in range(agent_range[0], agent_range[1]):
         ax.scatter(simulation_time, agents_mc[mc_number][agent_idx].position[0, 0], agents_mc[mc_number][agent_idx].position[0, 1], 'green')

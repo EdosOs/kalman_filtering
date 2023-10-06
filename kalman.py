@@ -4,7 +4,7 @@ from numpy.linalg import inv , solve
 from numpy import array , diag , exp , pi
 from EKF_models import range_measurement_model_2d
 from copy import copy , deepcopy
-from math import sqrt
+from math import sqrt , atan2
 
 # from Assimilation import assimilate
 class KalmanFilter:
@@ -30,12 +30,14 @@ class KalmanFilter:
         self.assim_state = array([x0] , dtype='float64')
         self.assim_covs = array([P] , dtype='float64')
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
-        self.state = self.F @ self.state + self.B * self.u[self.counter]  # u is not present in the P_pred because it is deterministic
+        self.state = self.F @ self.state + self.B *np.array([self.u[self.counter,:].T]).T  # u is not present in the P_pred because it is deterministic
         self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
-
+        P_inv = inv(self.P)
         self.predicted_state = np.append(self.predicted_state , self.state.copy())
         self.predicted_covs = np.append(self.predicted_covs , self.P.copy())
 
+
+        self.P_updated_inv = P_inv.copy()
         self.u_arr = np.append(self.u_arr , self.u.copy())
         self.P_pred = self.P.copy()
         self.state_pred = self.state.copy()
@@ -172,11 +174,11 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
     def update_EKF(self, measurement, R):
         K = self.P @ self.H.T @ np.linalg.solve(self.H @ self.P @ self.H.T + R, np.eye(R.shape[0]))
         # K = self.P @ self.H.T @ np.linalg.inv(self.H @ self.P @ self.H.T + R)
-        y = (measurement - self.hx)
+        y = K @ (measurement.T - self.hx)
 
         # likelihood = 1/(2*pi*S) * exp(-0.5*y.T @ invs @ y)
 
-        self.state += K @ [y] #posterior
+        self.state += y #posterior
         self.P = (np.eye(len(self.state)) - K@self.H) @ self.P @ (np.eye(len(self.state)) - K @ self.H).T + K @ R @ K.T # posterior cov (Joseph)
         P_inv = inv(self.P)
 
@@ -186,7 +188,7 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         self.R_arr = np.append(self.R_arr , R)
         self.update_state = self.state.copy()
         self.P_updated_inv = P_inv.copy()
-        self.residual_arr = np.append(self.residual_arr , y)
+        self.residual_arr = np.append(self.residual_arr ,(measurement - self.hx))
 
         return self.state #POSTIERIOR X(k+1|k+1)
 
@@ -195,14 +197,54 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         we use X_prediction as the nominal state'''
         x = self.state[x_index] - agent.position[0, 0]
         y = self.state[y_index] - agent.position[0, 1]
-        state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
-        H = np.zeros([1, len(self.state)], dtype='float64')
-        H[0, x_index] = x / state_to_meas_transform
-        H[0, y_index] = y / state_to_meas_transform
-        self.H = H
-        self.hx = state_to_meas_transform
-        return H, state_to_meas_transform
 
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        angle_state_to_meas_transform = np.array([atan2(y, x)])
+        '''
+        h(x) is of size 1x2 because we have 2 measurements - h(x) = [distance , angle]
+        H is of size 2x4 because we have 2 measurements and 4 states
+        H = [[X/sqrt(X^2+Y^2) , 0 , Y/sqrt(X^2+Y^2) , 0
+               -Y/(X^2+Y^2)   , 0 , X/(X^2+Y^2) )   , 0]]
+               Jacobian matrix
+        '''
+
+
+        H = np.zeros([2, len(self.state)], dtype='float64')
+        H[0, x_index] = x / distance_state_to_meas_transform
+        H[0, y_index] = y / distance_state_to_meas_transform
+        H[1, x_index] = -(y / (x**2 + y**2))
+        H[1, y_index] =  (x / (x**2 + y**2))
+
+        self.H = H
+        self.hx = np.array([distance_state_to_meas_transform,angle_state_to_meas_transform])
+        return H, distance_state_to_meas_transform
+    def range_measurement_model_2d_no_angle(self, x_index, y_index, agent):
+        x = self.state[x_index] - agent.position[0, 0]
+        y = self.state[y_index] - agent.position[0, 1]
+
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+
+
+        H = np.zeros([1, len(self.state)], dtype='float64')
+        H[0, x_index] = x / distance_state_to_meas_transform
+        H[0, y_index] = y / distance_state_to_meas_transform
+
+        self.H = H
+        self.hx = np.array([distance_state_to_meas_transform])
+
+    def range_measurement_model_2d_no_distance(self, x_index, y_index, agent):
+        x = self.state[x_index] - agent.position[0, 0]
+        y = self.state[y_index] - agent.position[0, 1]
+
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        angle_state_to_meas_transform = np.array([atan2(y, x)])
+
+        H = np.zeros([1, len(self.state)], dtype='float64')
+        H[0, x_index] = -(y / (x**2 + y**2))
+        H[0, y_index] =  (x / (x**2 + y**2))
+
+        self.H = H
+        self.hx = np.array([angle_state_to_meas_transform])
 
 class Gaussian:
     def __init__(self ,mean , var):
