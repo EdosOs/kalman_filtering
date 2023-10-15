@@ -5,7 +5,7 @@ from numpy import array , diag , exp , pi
 from EKF_models import range_measurement_model_2d
 from copy import copy , deepcopy
 from math import sqrt , atan2
-
+from scipy.integrate import solve_ivp
 # from Assimilation import assimilate
 class KalmanFilter:
     def __init__(self , x0 , P , Q , R , F, B, H, u ,dt , G ): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
@@ -65,30 +65,30 @@ class KalmanFilterInfo(KalmanFilter):
     def __init__(self , x0 , P , Q , R , F, B, H, u, dt , G): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         super().__init__( x0 , P , Q , R , F, B, H, u, dt , G)
 
-    def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
-        '''
-        note here P_inv is actually updated information matrix.
-        in contrast to the covariance mode kalman filter here we need
-        to calculate the updated covariance matrix first as it is necessary
-        in calculaing the kalman gain (K = P_update*H_transpose*R_inverse)
-
-        another important thing to keep in mind is that R is an input of this function only because
-        R is changing , we used changing R like in the article.
-        '''
-        R_inv = inv(R)
-        P_inv = inv(self.P) + self.H.T @ R_inv @ self.H #update covariance
-        self.P = inv(P_inv)
-
-        y = measurement - self.H @ self.state #the residual y
-        K =self.P @ self.H.T @ R_inv # the kalman gain
-        self.state += K @ y #posterior
-
-
-        self.P_updated_inv = P_inv.copy()
-        self.update_state = self.state.copy()
-        self.updated_state = np.append(self.updated_state , self.state.copy())
-        self.updated_covs = np.append(self.updated_covs , self.P.copy())
-        self.R_arr = np.append(self.R_arr , R)
+    # def update(self , measurement , R):    #going from x_hat(k+1|k) to x_hat(k+1|k+1)
+    #     '''
+    #     note here P_inv is actually updated information matrix.
+    #     in contrast to the covariance mode kalman filter here we need
+    #     to calculate the updated covariance matrix first as it is necessary
+    #     in calculaing the kalman gain (K = P_update*H_transpose*R_inverse)
+    #
+    #     another important thing to keep in mind is that R is an input of this function only because
+    #     R is changing , we used changing R like in the article.
+    #     '''
+    #     R_inv = inv(R)
+    #     P_inv = inv(self.P) + self.H.T @ R_inv @ self.H #update covariance
+    #     self.P = inv(P_inv)
+    #
+    #     y = measurement - self.H @ self.state #the residual y
+    #     K =self.P @ self.H.T @ R_inv # the kalman gain
+    #     self.state += K @ y #posterior
+    #
+    #
+    #     self.P_updated_inv = P_inv.copy()
+    #     self.update_state = self.state.copy()
+    #     self.updated_state = np.append(self.updated_state , self.state.copy())
+    #     self.updated_covs = np.append(self.updated_covs , self.P.copy())
+    #     self.R_arr = np.append(self.R_arr , R)
     def assimilate(self ,agents):
         P_pred_inv = np.array([inv(agent.filter.P_pred.copy()) for agent in agents])
         P_update_inv = np.array([agent.filter.P_updated_inv.copy() for agent in agents])
@@ -169,8 +169,21 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         self.H, self.hx = H, hx #linearizing the measurement matrix and calulating the relevant measurement from prediction
 
     def predict_EKF(self):
-        # self.F = df(x,u)/dx
-        pass
+
+        self.state = self.F_sol # u is not present in the P_pred because it is deterministic
+        self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
+        # P_inv = inv(self.P)
+        self.predicted_state = np.append(self.predicted_state , self.state.copy())
+        self.predicted_covs = np.append(self.predicted_covs , self.P.copy())
+
+
+        # self.P_updated_inv = P_inv.copy()
+        self.u_arr = np.append(self.u_arr , self.u.copy())
+        self.P_pred = self.P.copy()
+        self.state_pred = self.state.copy()
+        self.counter+=1
+        return self.state , self.state #PRIOR X(k+1|k)
+
     def update_EKF(self, measurement, R):
         K = self.P @ self.H.T @ np.linalg.solve(self.H @ self.P @ self.H.T + R, np.eye(R.shape[0]))
         # K = self.P @ self.H.T @ np.linalg.inv(self.H @ self.P @ self.H.T + R)
@@ -245,6 +258,16 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
 
         self.H = H
         self.hx = np.array([angle_state_to_meas_transform])
+    def vdp_F(self,state,C,K,M,dt):
+
+        f = np.array([[state[1,0]], [(-2*C/M) * (state[0,0]**2-1)*state[1,0]-K*state[0,0]/M]])
+        F = np.array([[0 , 1] , [-4*C*state[0,0]*state[1,0] / M - K/M , -2*C*(state[0,0]**2 - 1)/M]])*dt + np.eye(len(state))
+        self.f = f
+        self.F = F
+
+        ode_fcn = lambda T, X: [X[1], (-2 * C / M) * (X[0] ** 2 - 1) * X[1] - K * X[0] / M]
+        self.F_sol = solve_ivp(ode_fcn, t_span=[self.counter * dt , (self.counter+1) * dt], y0=state[:,0],
+                        t_eval=[(self.counter+1) * dt]).y
 
 class Gaussian:
     def __init__(self ,mean , var):

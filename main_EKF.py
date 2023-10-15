@@ -10,7 +10,7 @@ from control import input
 from agent import Agent
 from ode import acceleration_model , velocity_model , circle
 from EKF_models import range_measurement_model_2d
-from noise_modeling import velocity_model_noise,velocity_model_noise_2 , acceleration_model_noise
+from noise_modeling import velocity_model_noise, acceleration_model_noise
 import plots
 from time import time
 from plots import print_updated_state
@@ -19,7 +19,7 @@ t_start = time()
 #set filter params:
 state_dim = 4
 measurement_dim = 2
-dt = 0.1
+dt = 0.01
 process_noise_intensity = 0.01 #M^2
 measurement_noise_intensity = 0.01#M^2
 x_index = 0
@@ -30,7 +30,7 @@ use_update = 1
 iterations_between_updates = 1
 #define simulation parameters
 t_initial = 0
-t_final = 5
+t_final = 50
 steps = int((t_final-t_initial)/dt)
 simulation_process_noise =0
 simulation_input_amplitude = np.append(np.array([1 for _ in range(int(steps/2))]),np.array([-1 for _ in range(int(steps/2))]))
@@ -53,8 +53,8 @@ y_acc_intensity = 0.05
 # MC parameters
 agents_mc = []
 experiments_arr = []
-number_of_mc_runs = 20
-experiments = 10
+number_of_mc_runs = 2
+experiments = 1
 process_noise_intensity_arr = np.linspace(process_noise_intensity, process_noise_intensity*100, experiments)
 
 
@@ -90,12 +90,10 @@ u = array([np.zeros([1 , len(x_input)])[0], x_input ,np.zeros([1 , len(y_input)]
 # define kalman for each sensor
 for experiment in range(experiments):
     print(f'runing mc num:{experiment}')
-    Q = velocity_model_noise_2(var=process_noise_intensity_arr[experiment], dt=dt)
+    Q = velocity_model_noise(var=process_noise_intensity_arr[experiment], dt=dt)
     for run in range(number_of_mc_runs):
         for agent in agents:
             agent.measure(np.array([X[0],Y[0]]) , noise_factor=noise_factor_agent_coeff, noise_limit = measurement_noise_limit_agent)
-            # Q = array([[0., 1, 0., 1]]).T * process_noise_intensity_arr[run] @ array([[0., 1, 0., 1]]) * dt  # Q Process noise covariance
-            # Q = array([[0., 1, 0., 1.]]).T * process_noise_intensity @ array([[0., 1, 0., 1]]) * dt  # Q Process noise covariance
             initial_state = array([[0 + randn() * sigma , 0., 0 + randn() * sigma , 0.]], dtype='float64').T  # Initial state [x, y]
             # initialize KF
         for agent in agents:
@@ -185,7 +183,11 @@ def plot_mc_estimation_error(mc_number, state_index, agent_idx, agents_mc, simul
     plt.plot(simulation_time,
              theoretical_P_mean[mc_number], '--k')
     plt.plot(simulation_time,
+             3*theoretical_P_mean[mc_number], '--m')
+    plt.plot(simulation_time,
              -theoretical_P_mean[mc_number], '--k')
+    plt.plot(simulation_time,
+             -3*theoretical_P_mean[mc_number], '--m')
     plt.legend(['MC calculated STD', '1 Sigma envelope'])
     plt.title(f'agent MC calculated estimation error vs. theoretically calculated estimation error')
     plt.show()

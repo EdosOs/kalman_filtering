@@ -5,15 +5,15 @@ from numpy.random import randn
 import matplotlib.pyplot as plt
 import pandas as pd
 from kalman import KalmanFilter , KalmanFilterInfo , UnscentedKalmanFilter,ExtendedKalmanFilter , Gaussian , add_gaussian_noise
-from control import input
+from control import input, constant_input
 from agent import Agent
 from ode import acceleration_model , velocity_model
 from position_models import circle , single_circle
-from noise_modeling import velocity_model_noise , acceleration_model_noise
+from noise_modeling import velocity_model_noise , acceleration_model_noise , velocity_model_noise_3x3
 import plots
 # General parameters
 #set filter params:
-state_dim = 4
+state_dim = 3
 measurement_dim = 2
 dt = .1
 meas_var = np.array([1., 1.]) # M_squared
@@ -23,13 +23,13 @@ process_noise_factor = .1
 t_initial = 0
 t_final = 30
 simulation_process_noise =.1
-simulation_input_amplitude =1
+simulation_input_amplitude =[1]
 simulation_input_type: str = 'step'
 
 # define agents parameters
 measurement_noise_limit_agent = 5.
 noise_factor_agent_coeff = 0.0
-num_of_agents = 4
+num_of_agents = 1
 agent_positions = np.array([[0 , 0] ,[35, 0] , [0 , 30] , [30 , 30]])
 agents = [Agent([agent_positions[i][0], agent_positions[i][1]],[randn()*0, randn()*0, randn()*0] , 1 , 0, id=i + 1) for i in range(num_of_agents)]
 
@@ -44,13 +44,12 @@ y_acc_factor = .2
 
 initial_state = array([[1, 0 ,1 , 0]] , dtype='float64').T  # Initial state [x, y]
 P = eye(state_dim , dtype='float64') * 10.0  # Initial estimation error covariance - P
-Q = array([[0. , .1 , 0. , .1]]).T *process_noise_factor @ array([[0. , .1 , 0. , .1]])*dt  # Q Process noise covariance
-# Q = velocity_model_noise(std=process_noise_factor ,dt=dt)
+Q = velocity_model_noise_3x3(var=process_noise_factor ,dt=dt)
 R = diag(meas_var)  #R Measurement noise covariance
 F = array([[1, dt , 0 , 0],[0, 1 , 0 , 0] , [0 , 0 , 1 , dt],[0,0,0,1]] , dtype='float64') # F the process transformation matrix
 H = array([[1 , 0 , 0 , 0],[0 , 0, 1 ,0 ]],dtype='float64') # H the measurements transformation matrix
-B = array([[0., x_acc_factor, 0., y_acc_factor]] , dtype='float64').T * dt # Input matrix
-G = array([[0, .0, 0, .0]] , dtype='float64').T * dt #Dynamic Model Noise
+B = array([[0., x_acc_factor, 0.]] , dtype='float64').T * dt # Input matrix
+G = array([[0, .0, 0]] , dtype='float64').T * dt #Dynamic Model Noise
 
 
 initial_state_X = [1 ,0 ,0]
@@ -62,25 +61,21 @@ noise_mat_Y = array([[0., 0, 0.]] , dtype='float64')
 #Check how to start input at certain time.
 T , X = acceleration_model(t_start=t_initial , t_stop=t_final ,initial_cond=initial_state_X,  input_type=simulation_input_type, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude, dt=dt , B=input_mat_X, G=noise_mat_X)
 T , Y = acceleration_model(t_start=t_initial , t_stop=t_final,initial_cond=initial_state_Y, input_type=simulation_input_type, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude , dt=dt , B=input_mat_Y, G=noise_mat_Y)
-u = np.squeeze(input('step' , T , 1))
-# plt.figure()
-# plt.plot(np.sin(linspace(0,6.28,100)), np.cos(linspace(0,6.28,100)))
-# plt.show()
-# X , Y = circle(t_start=t_initial,t_stop=t_final,r=10 , dt=dt , inital_position=[10,0])
-# plt.figure()
-# plt.plot(X[0], Y[0])
-# plt.show()
+u = np.array([np.squeeze(constant_input('step' , T , 1))]).T
+
+real_measurements = np.array([X[0] , X[1]])
+noised_measurements = real_measurements * randn(*real_measurements.shape)
 
 
 # define kalman for each sensor
 for agent in agents:
-    agent.filter = ExtendedKalmanFilter(x0 = initial_state,P =  P,Q =  Q,R =  R ,F = F , B = B , H = H ,u = u,dt = dt ,G=G )
+    agent.filter = KalmanFilter(x0 = initial_state,P =  P,Q =  Q,R =  R ,F = F , B = B , H = H ,u = u,dt = dt ,G=G )
 
 
 #initialize arrays for storing state
-for real_measurement in array([X[0],Y[0]]).T:
+for measurement in noised_measurements.T[0:-1]:
     for agent in agents:
-        measurement = agent.measure_iteratively(real_measurement) # sensor measuring using real data
+        # measurement = agent.measure_iteratively(real_measurement) # sensor measuring using real data
 
         #prediction
         agent.filter.prediction()
