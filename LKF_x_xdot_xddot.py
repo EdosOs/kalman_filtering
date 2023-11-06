@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import expand_dims ,squeeze , array , diag , eye , linspace
-from numpy.random import randn
+from numpy.random import randn , uniform
 import matplotlib.pyplot as plt
 import pandas as pd
 from kalman import KalmanFilter , KalmanFilterInfo , UnscentedKalmanFilter,ExtendedKalmanFilter , Gaussian , add_gaussian_noise
@@ -12,7 +12,7 @@ from time import time
 start_time = time()
 state_dim = 3
 measurement_dim = 1
-dt = .01
+dt = .1
 
 #noise parameters
 meas_var = np.array([0.1]) # M_squared
@@ -45,7 +45,7 @@ T , X = acceleration_model(t_start=t_initial , t_stop=t_final ,initial_cond=init
 
 u = np.array([np.squeeze(constant_input('step' , T , 1))]).T
 delay = 100
-
+len_arr = 1
 experiments_num = 1
 mc_runs = 1
 experiments_arr =[]
@@ -66,18 +66,19 @@ for run in range(mc_runs):
 
             #prediction
             filter.prediction()
-
+            delay = np.floor(uniform(0,200))
             #update
             if filter.counter > delay :
-                filter.update(expand_dims(noised_measurements.T[filter.counter - delay], axis=1),R)  # feeding the update with measurement cov*distance factor
-
+                filter.update(expand_dims(noised_measurements.T[filter.counter - int(delay)], axis=1),R)  # feeding the update with measurement cov*distance factor
+                len_arr += 1
         # rearrange data
-        filter.updated_covs = filter.updated_covs.reshape(len(X[0]) - delay,state_dim ,state_dim )
-        filter.updated_state= filter.updated_state.reshape(len(X[0]) - delay ,state_dim )
+        filter.updated_covs = filter.updated_covs.reshape(len_arr,state_dim ,state_dim )
+        filter.updated_state= filter.updated_state.reshape(len_arr ,state_dim )
         filter.predicted_state = filter.predicted_state.reshape(len(X[0]) ,state_dim )
         filter.predicted_covs = filter.predicted_covs.reshape(len(X[0]),state_dim ,state_dim )
-        filter.R_arr = filter.R_arr.reshape(len(X[0])-delay-1 ,measurement_dim  ,measurement_dim )
+        filter.R_arr = filter.R_arr.reshape(len_arr-1 ,measurement_dim  ,measurement_dim )
         experiments_arr.append(filter)
+        len_arr = 1
     mc_arr.append(experiments_arr)
     experiments_arr =[]
 # Ground thruth : X_tilde = X_real - X_estimated
@@ -91,25 +92,26 @@ Bar-Shalom [1] has an excellent discussion of this topic.
 '''
 end_time = time()
 run_time = end_time - start_time
+len_update = len(filter.updated_covs)
 print('done')
-state_index = 2
+state_index = 0
 mc_run_index = 0
 experiment_index = 0
 ax = plt.figure().add_subplot()
-ax.plot(T[delay:], squeeze(mc_arr[mc_run_index][experiment_index].updated_state)[:, state_index] - X[state_index,delay:], 'r')
-plt.plot(T[delay:], mc_arr[mc_run_index][experiment_index].updated_covs[:, state_index, state_index] ** .5, '--k')
-plt.plot(T[delay:],-mc_arr[mc_run_index][experiment_index].updated_covs[:, state_index, state_index] ** .5, '--k')
+ax.plot(T[:len_update], squeeze(mc_arr[mc_run_index][experiment_index].updated_state)[:, state_index] - X[state_index,:len_update], 'r')
+plt.plot(T[:len_update], mc_arr[mc_run_index][experiment_index].updated_covs[:, state_index, state_index] ** .5, '--k')
+plt.plot(T[:len_update],-mc_arr[mc_run_index][experiment_index].updated_covs[:, state_index, state_index] ** .5, '--k')
 plt.legend(['X', '1 Sigma envelope'])
-plt.title(f' X Acceleration (updated) Errors')
+plt.title(f' X Position (updated) Errors')
 plt.xlabel('time')
 plt.ylabel('amplitude')
 plt.show()
 
 ax = plt.figure().add_subplot()
-ax.plot(T[delay:], squeeze(mc_arr[mc_run_index][experiment_index].updated_state)[:, state_index], 'r')
-ax.plot(T[delay:], X[state_index,delay:]+0.03, '--r')
+ax.plot(T[:len_update], squeeze(mc_arr[mc_run_index][experiment_index].updated_state)[:, state_index], 'r')
+ax.plot(T[:len_update], X[state_index,:len_update]+0.03, '--r')
 plt.legend(['X estimation', 'X real'])
-plt.title(f'acceleration - estimation and real')
+plt.title(f'position - estimation and real')
 plt.xlabel('time')
 plt.ylabel('amplitude')
 plt.show()

@@ -47,8 +47,8 @@ u = np.array([np.squeeze(constant_input('step' , T , 1))]).T
 # plt.plot(T,X[1])
 # plt.show()
 
-experiments_num = 200
-mc_runs = 100
+experiments_num = 100
+mc_runs = 1
 experiments_arr =[]
 mc_arr = []
 process_noise_factor_arr = np.linspace(0.01,1,mc_runs)

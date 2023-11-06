@@ -201,7 +201,7 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         self.R_arr = np.append(self.R_arr , R)
         self.update_state = self.state.copy()
         self.P_updated_inv = P_inv.copy()
-        self.residual_arr = np.append(self.residual_arr ,(measurement - self.hx))
+        self.residual_arr = np.append(self.residual_arr ,(measurement.T - self.hx))
 
         return self.state #POSTIERIOR X(k+1|k+1)
 
