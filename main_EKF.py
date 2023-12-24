@@ -55,27 +55,27 @@ steps = int((t_final-t_initial)/dt)
 
 
 simulation_process_noise =0
-simulation_t_transition = [3,7,12,15] # when to change input amplitude
-simulation_input_amplitude = [5,-1,0,-5,0]#define transition to simulation input , in simulation_input_amplitude the first and last are initial and final conditions
+simulation_t_transition = [0,3,7,12,15,20] # when to change input amplitude
+simulation_input_amplitude = [3,-1,0,-8,0]#define transition to simulation input , in simulation_input_amplitude the first and last are initial and final conditions
 # simulation_input_amplitude = [1]
 # simulation_input_amplitude = np.append(np.array([1 for _ in range(int(steps/2))]),np.array([-1 for _ in range(int(steps/2))]))
 # simulation_input_amplitude = np.append(np.array([1 for _ in range(int(steps/2))]),np.array([1 for _ in range(int(steps/2))]))
 # can handle step , cos , sin , ramp , variable step(step with random amplitude)
-simulation_input_type_x: str = 'step'
-simulation_input_type_y: str = 'step'
+simulation_input_type_x: str = 'sin'
+simulation_input_type_y: str = 'sin'
 
 
 
 # define agents parameters
 measurement_noise_limit_agent = np.array([[0.01 , 1000000]],dtype='float64')
 noise_factor_agent_coeff = 0.01 # sensor noise factor coeff (changes R as a function of distance and coeff)
-num_of_agents = 5
-agent_positions = np.array([[0 , 0] ,[5, 5] , [10 , 10] , [15 , 15] , [20, 20], [5 , 50] , [5000 , 5000]])
+num_of_agents = 1
+agent_positions = np.array([[0 , 0] ,[10, 0] , [7 , 7] , [15 , 15] , [20, 20], [5 , 50] , [5000 , 5000]])
 agents = [Agent(np.array([[agent_positions[i][0], agent_positions[i][1]]]),[randn()*0, randn()*0, randn()*0] , measurement_noise_intensity , 0, id=i + 1) for i in range(num_of_agents)]
 
 
-x_acc_intensity = 0.05
-y_acc_intensity = 0.05
+x_acc_intensity = .5
+y_acc_intensity = .5
 
 # Define kalman filter properties
 sigma = 1000**0.5
@@ -102,18 +102,20 @@ print('start simulating target')
 T , X = acceleration_model(t_start=t_initial , t_stop=t_final ,initial_cond=initial_condition_X,  input_type=simulation_input_type_x, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude, dt=dt , B=input_mat_X, G=noise_mat_X , t_transition=simulation_t_transition)
 T , Y = acceleration_model(t_start=t_initial , t_stop=t_final,initial_cond=initial_condition_Y, input_type=simulation_input_type_y, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude , dt=dt , B=input_mat_Y, G=noise_mat_Y , t_transition=simulation_t_transition)
 print('done simulating target')
-
+# plt.figure()
+# plt.plot(T , X[1])
+# plt.show()
 x_input = np.array([np.squeeze(input(simulation_input_type_x , t , simulation_input_amplitude , t_transition=simulation_t_transition)) for t in T])
 y_input = np.array([np.squeeze(input(simulation_input_type_y , t , simulation_input_amplitude,t_transition=simulation_t_transition)) for t in T])
 
 if mode == 'velocity':
     u = array([np.zeros([1 , len(x_input)])[0], x_input ,np.zeros([1 , len(y_input)])[0], y_input]).T
-    X[2,:] = u[:,1]
-    Y[2,:] = u[:,3]
+    X[2,:] = u[:,1]*x_acc_intensity
+    Y[2,:] = u[:,3]*y_acc_intensity
 elif mode == 'acceleration':
     u = array([np.zeros([1 , len(x_input)])[0], np.zeros([1 , len(x_input)])[0],x_input,np.zeros([1 , len(y_input)])[0], np.zeros([1 , len(y_input)])[0], y_input]).T
-    X[2,:] = u[:,2]
-    Y[2,:] = u[:,5]
+    X[2,:] = u[:,2]*x_acc_intensity
+    Y[2,:] = u[:,5]*y_acc_intensity
 
 
 
@@ -143,14 +145,15 @@ for experiment in range(experiments):
                     #prediction
                     agent.filter.prediction()
                 if agent.filter.counter % iterations_between_updates == 0:
-                    if use_update == 1:#update model
+                    if use_update == 1:
+                        #update model
                         if angle_flag == 1 and distance_flag == 1:
                             agent.filter.range_measurement_model_2d(x_index=x_index, y_index=y_index , agent = agent)
                         elif angle_flag == 0:
                             agent.filter.range_measurement_model_2d_no_angle(x_index=x_index, y_index=y_index, agent=agent)
                         elif distance_flag == 0:
                             agent.filter.range_measurement_model_2d_no_distance(x_index=x_index, y_index=y_index, agent=agent)
-                    if use_update == 1:#update
+                    if use_update == 1:
                         #update
                         if angle_flag == 1 and distance_flag ==1 :
                             agent.filter.update_EKF(measurement = np.array([[agent.measurements[measurement_index], agent.measurements_angle[measurement_index]]]), R = agent.R_arr[:,:,measurement_index] ) # feeding the update with measurement cov*distance factor
@@ -192,7 +195,7 @@ plots.print_updated_covariance(mc_number=0, agent_range=[0,10] , agents_mc=exper
 
 plots.print_measurement_comparison(agents_mc=experiments_arr[0],mc_number=0,agent_range=[0,10],simulation_time=T)
 
-plots.print_assimilated_state(mc_number=0 , state_index= 2 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[0] , simulation_time=T)
+plots.print_assimilated_state(mc_number=0 , state_index= 2 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[0,:-1] , simulation_time=T[:-1])
 plots.print_assimilated_covariance(mc_number=0 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[:,:-1] , simulation_time=T[:-1] , mode = mode)
 #
 plots.print_predicted_state(mc_number=0 , state_index= 0 , agent_range=[0,4] , agents_mc=experiments_arr[0] , simulation_measurement=X[0] , simulation_time=T)
