@@ -34,7 +34,7 @@ class Agent:
         distance_noised = np.abs(distance_real + (self.baseline_measurement_var + measurement_var_by_distance)**.5 * randn(*measurement_var_by_distance.shape))
         R_arr = np.zeros([2,2,len(measurement_var_by_distance)])
         R_arr[0,0,:] = (measurement_var_by_distance + self.baseline_measurement_var)
-        R_arr[1,1,:] = (self.baseline_measurement_var)
+        R_arr[1,1,:] = (measurement_var_by_distance + self.baseline_measurement_var)
 
         self.R_arr = R_arr
         self.measurements_clean = distance_real
