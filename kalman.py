@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import alg_utils
 from numpy.linalg import inv , solve
 from numpy import array , diag , exp , pi
 from EKF_models import range_measurement_model_2d
@@ -7,6 +8,8 @@ from copy import copy , deepcopy
 from math import sqrt , atan2
 from scipy.integrate import solve_ivp
 # from Assimilation import assimilate
+dtype = 'float16'
+
 class KalmanFilter:
     def __init__(self , x0 , P , Q , R , F, B, H, u ,dt , G ): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         self.state = x0
@@ -20,16 +23,16 @@ class KalmanFilter:
         self.u = u
         self.dt = dt
         self.counter = 0
-        self.predicted_state = array([x0] , dtype='float64')
-        self.updated_state = array([x0] , dtype='float64')
+        self.predicted_state = array([x0] , dtype=dtype)
+        self.updated_state = array([x0] , dtype=dtype)
         self.update_state = x0
-        self.updated_covs = array([P] , dtype='float64')
-        self.predicted_covs = array([P] , dtype='float64')
-        self.R_arr = array([] , dtype='float64')
-        self.u_arr = array([] , dtype='float64')
-        self.residual_arr = array([] , dtype='float64') # Array for saving the residuals (measurement - H*predicted_state)
-        self.assim_state = array([x0] , dtype='float64')
-        self.assim_covs = array([P] , dtype='float64')
+        self.updated_covs = array([P] , dtype=dtype)
+        self.predicted_covs = array([P] , dtype=dtype)
+        self.R_arr = array([] , dtype=dtype)
+        self.u_arr = array([] , dtype=dtype)
+        self.residual_arr = array([] , dtype=dtype) # Array for saving the residuals (measurement - H*predicted_state)
+        self.assim_state = array([x0] , dtype=dtype)
+        self.assim_covs = array([P] , dtype=dtype)
     def prediction(self): # going from x_hat(k|k) to x_hat(k+1|k)
         self.state = self.F @ self.state + self.B *np.array([self.u[self.counter,:].T]).T  # u is not present in the P_pred because it is deterministic
         self.P = self.F @ self.P @ self.F.T + self.Q # compute P(k+1|k)
@@ -103,9 +106,24 @@ class KalmanFilterInfo(KalmanFilter):
         self.assim_state = np.append(self.assim_state , self.state.copy())
         self.assim_covs = np.append(self.assim_covs ,self.P.copy())
 
-         # self.P = inv(self.P_pred)  + np.sum(agents_P_inv_updated) - np.sum(agents_P_inv_predicted)
-         # self.state =self.P @ (inv(self.P_pred) @ self.state_pred +   np.array(agents_P_inv_updated)@np.array(agents_states_updated)  -  np.array(agents_P_inv_predicted) @ np.array(agents_states_predicted))
-    #𝐏=(𝐈−𝐊𝐇)𝐏¯(𝐈−𝐊𝐇)𝖳+𝐊𝐑𝐊𝖳 Joseph
+    def assimilate_mean(self , agents):
+        self.P = alg_utils.matrix_arr_mean(np.array([agent.filter.P for agent in agents]))
+        self.state = alg_utils.matrix_arr_mean(np.array([agent.filter.update_state for agent in agents]))
+        self.assim_state = np.append(self.assim_state , self.state.copy())
+        self.assim_covs = np.append(self.assim_covs ,self.P.copy())
+        pass
+    def assimilate_min_P(self , agents):
+        min_P ,min_P_index = alg_utils.matrix_arr_min_indexes(np.array([agent.filter.P for agent in agents]))
+        diag_indecies = np.diag(np.reshape(np.array(min_P_index) , [len(self.state) , len(self.state)] ))
+
+        min_P_state = alg_utils.select_by_index_dfs(np.array([agent.filter.update_state for agent in agents]), diag_indecies)
+        # for i in range(len(self.state)):
+        #     self.P[i,i] = min_P[i,i]
+        self.state = np.reshape(min_P_state , self.state.shape)
+        self.assim_state = np.append(self.assim_state , self.state.copy())
+        self.assim_covs = np.append(self.assim_covs ,self.P.copy())
+        pass
+
         # predict
         # x = F @ x
         # P = F @ P @ F.T + Q
@@ -115,6 +133,7 @@ class KalmanFilterInfo(KalmanFilter):
         # y = z - H @ x
         # x += K @ y
         # P = P - K @ H @ P
+    #𝐏=(𝐈−𝐊𝐇)𝐏¯(𝐈−𝐊𝐇)𝖳+𝐊𝐑𝐊𝖳 Joseph
 
 class UnscentedKalmanFilter(KalmanFilter):
     '''
@@ -162,8 +181,8 @@ class UnscentedKalmanFilter(KalmanFilter):
 class ExtendedKalmanFilter(KalmanFilterInfo):
     def __init__(self , x0 , P , Q , R , F, B, H, u, dt , G): #P - initial covariance (changing each iter) , Q - dynamic model cov , R - measurement cov
         super().__init__( x0 , P , Q , R , F, B, H, u, dt , G)
-        self.assim_state = array([] , dtype='float64')
-        self.assim_covs = array([] , dtype='float64')
+        self.assim_state = array([] , dtype=dtype)
+        self.assim_covs = array([] , dtype=dtype)
         self.hx = 0
 
     def model_update(self ,H , hx):
@@ -225,7 +244,7 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         elif (y**2)**0.5 <epsilon and x<0:
             y = -epsilon
 
-        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype=dtype)  # h(x) w
         angle_state_to_meas_transform = np.array([atan2(y, x)])
         '''
         h(x) is of size 1x2 because we have 2 measurements - h(x) = [distance , angle]
@@ -236,7 +255,7 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         '''
 
 
-        H = np.zeros([2, len(self.state)], dtype='float64')
+        H = np.zeros([2, len(self.state)], dtype=dtype)
         H[0, x_index] = x / distance_state_to_meas_transform
         H[0, y_index] = y / distance_state_to_meas_transform
         H[1, x_index] = -(y / (x**2 + y**2))
@@ -249,10 +268,10 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         x = self.state[x_index] - agent.position[0, 0]
         y = self.state[y_index] - agent.position[0, 1]
 
-        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype=dtype)  # h(x) w
 
 
-        H = np.zeros([1, len(self.state)], dtype='float64')
+        H = np.zeros([1, len(self.state)], dtype=dtype)
         H[0, x_index] = x / distance_state_to_meas_transform
         H[0, y_index] = y / distance_state_to_meas_transform
 
@@ -263,10 +282,10 @@ class ExtendedKalmanFilter(KalmanFilterInfo):
         x = self.state[x_index] - agent.position[0, 0]
         y = self.state[y_index] - agent.position[0, 1]
 
-        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype='float64')  # h(x) w
+        distance_state_to_meas_transform = np.array([sqrt(x ** 2 + y ** 2)], dtype=dtype)  # h(x) w
         angle_state_to_meas_transform = np.array([atan2(y, x)])
 
-        H = np.zeros([1, len(self.state)], dtype='float64')
+        H = np.zeros([1, len(self.state)], dtype=dtype)
         H[0, x_index] = -(y / (x**2 + y**2))
         H[0, y_index] =  (x / (x**2 + y**2))
 
@@ -298,5 +317,5 @@ def add_gaussian_noise(measurements , mean , var):
     for m in range(measurements.shape[0]):
         noise.iloc[m] = [(var[m] * np.random.randn() + mean) for i in range(len(measurements[0,:]))]
     noisy_measurements = noise+pd.DataFrame(measurements.copy())
-    return array(noisy_measurements , dtype='float64')
+    return array(noisy_measurements , dtype=dtype)
 # self.P = (np.eye(len(self.state)) - K@self.H) @ self.P

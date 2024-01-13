@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-
+import  alg_utils
 import pandas as pd
 # from main_EKF import agents,T,X,Y , agents_mc
 from numpy import squeeze
@@ -41,6 +41,7 @@ def print_updated_state(mc_number, agent_range, agents_mc, simulation_time, simu
     for agent_idx in range(agent_range[0], agent_range[1]):
         # plot X
         fig, axs = plt.subplots(3)
+        fig1, axs1 = plt.subplots(3,2)
         axs[0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], 'r')
         axs[1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 1], 'r')
         if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
@@ -58,8 +59,6 @@ def print_updated_state(mc_number, agent_range, agents_mc, simulation_time, simu
         axs[1].set_ylabel(unit_arr[1])
         axs[2].set_xlabel('Time[Sec]')
         axs[2].set_ylabel(unit_arr[2])
-        # if mode == 'acceleration' :axs[2].set_xlabel('Time[Sec]')
-        # if mode == 'acceleration' :axs[2].set_ylabel(unit_arr[2])
 
         axs[0].set_title('Position')
         axs[1].set_title('Velocity')
@@ -70,11 +69,58 @@ def print_updated_state(mc_number, agent_range, agents_mc, simulation_time, simu
         axs[2].grid(color='k', linestyle='--', linewidth=.2)
         plt.subplots_adjust(hspace=0.75)
         fig.set_size_inches((8.5, 11), forward=False)
-
-        # fig.suptitle(f'Sensor {agents_mc[mc_number][agent_idx].id} at position ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) state estimation vs simulation data')
-        # fig.suptitle(f'Sensor at position ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) state estimation')
-        # fig.suptitle(f'State estimation - X coordinates')
         fig.suptitle(f'State estimation')
+
+        axs1[0,0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], 'r')
+        axs1[1,0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 1], 'r')
+
+        axs1[0,0].plot(simulation_time, simulation_measurement[0], '--b')
+        axs1[1,0].plot(simulation_time, simulation_measurement[1], '--b')
+
+        axs1[0,1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
+        axs1[1,1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 3], 'r')
+
+        axs1[0,1].plot(simulation_time, simulation_measurement[0], '--b')
+        axs1[1,1].plot(simulation_time, simulation_measurement[1], '--b')
+
+        axs1[2,0].plot(simulation_time, simulation_measurement[2], '--b')
+        axs1[2,1].plot(simulation_time, simulation_measurement[2], '--b')
+
+        axs1[0,0].legend([' Estimation', ' Real'])
+        axs1[1,0].legend([' Estimation', ' Real'])
+        axs1[0,1].legend([' Estimation', ' Real'])
+        axs1[1,1].legend([' Estimation', ' Real'])
+
+        axs1[0,0].set_title('Position - X')
+        axs1[1,0].set_title('Velocity - X')
+        axs1[0,1].set_title('Position - Y')
+        axs1[1,1].set_title('Velocity - Y')
+        axs1[2,0].set_title('Acceleration - X')
+        axs1[2,1].set_title('Acceleration - Y')
+
+        axs1[0,0].set_xlabel('Time[Sec]')
+        axs1[0,0].set_ylabel(unit_arr[0])
+        axs1[1,0].set_xlabel('Time[Sec]')
+        axs1[1,0].set_ylabel(unit_arr[1])
+        axs1[2,0].set_xlabel('Time[Sec]')
+        axs1[2,1].set_ylabel(unit_arr[2])
+
+        axs1[0,1].set_xlabel('Time[Sec]')
+        axs1[0,1].set_ylabel(unit_arr[0])
+        axs1[1,1].set_xlabel('Time[Sec]')
+        axs1[1,1].set_ylabel(unit_arr[1])
+        axs1[2,0].set_xlabel('Time[Sec]')
+        axs1[2,1].set_ylabel(unit_arr[2])
+
+        axs1[0,0].grid(color='k', linestyle='--', linewidth=.2)
+        axs1[1,0].grid(color='k', linestyle='--', linewidth=.2)
+        axs1[0,1].grid(color='k', linestyle='--', linewidth=.2)
+        axs1[1,1].grid(color='k', linestyle='--', linewidth=.2)
+        axs1[2,0].grid(color='k', linestyle='--', linewidth=.2)
+        axs1[2,1].grid(color='k', linestyle='--', linewidth=.2)
+
+        fig1.suptitle(f'State estimation')
+
         if save_figs == 1:
             # manager = plt.get_current_fig_manager()
             # manager.resize(*manager.window.maxsize())
@@ -84,21 +130,38 @@ def print_updated_covariance(mc_number, agent_range, agents_mc, simulation_time,
     units = ['Position' , 'Velocity' , 'Acceleration']
     for agent_idx in range(agent_range[0], agent_range[1]):
         num_of_subplots = 3 if mode == 'acceleration' else 2
-        fig, axs = plt.subplots(num_of_subplots)
+        # fig, axs = plt.subplots(num_of_subplots)
+        fig1,axs1 = plt.subplots(num_of_subplots,num_of_subplots)
+        # for index in range(num_of_subplots):
+        #     axs[index].plot(simulation_time,-simulation_measurement[index]+squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, index] , 'r')
+        #     axs[index].plot(simulation_time,agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--k')
+        #     axs[index].plot(simulation_time,3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--b')
+        #     axs[index].plot(simulation_time,-agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--k')
+        #     axs[index].plot(simulation_time,-3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--b')
+        #     axs[0].legend([f'Estimation','1 Sigma envelope','3 Sigma envelope'])
+        #     axs[index].set_xlabel('Time[Sec]')
+        #     axs[index].set_ylabel(unit_arr[index])
+        #     axs[index].set_title(f'{units[index]} estimation error')
+        #     axs[index].grid(color='k', linestyle='--', linewidth=.2)
+        #
+        # fig.suptitle(f'Sensor estimation  Errors - X coordinates')
         for index in range(num_of_subplots):
-            axs[index].plot(simulation_time,simulation_measurement[index]-squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, index] , 'r')
-            axs[index].plot(simulation_time,agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--k')
-            axs[index].plot(simulation_time,3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--b')
-            axs[index].plot(simulation_time,-agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--k')
-            axs[index].plot(simulation_time,-3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, index, index] ** .5, '--b')
-            axs[0].legend([f'Estimation','1 Sigma envelope','3 Sigma envelope'])
-            axs[index].set_xlabel('Time[Sec]')
-            axs[index].set_ylabel(unit_arr[index])
-            axs[index].set_title(f'{units[index]} estimation error')
-            axs[index].grid(color='k', linestyle='--', linewidth=.2)
-            # axs[index].set_ylim([-1, 1])
+            for index1 in range(num_of_subplots):
+                idx = index+index1
+                if index1 == 1 : idx += 1
+                if idx>3:idx = 3
+                axs1[index,index1].plot(simulation_time,simulation_measurement[idx]-squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, idx] , 'r')
+                axs1[index,index1].plot(simulation_time,agents_mc[mc_number][agent_idx].filter.updated_covs[:, idx, idx] ** .5, '--k')
+                axs1[index,index1].plot(simulation_time,3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, idx, idx] ** .5, '--b')
+                axs1[index,index1].plot(simulation_time,-agents_mc[mc_number][agent_idx].filter.updated_covs[:, idx, idx] ** .5, '--k')
+                axs1[index,index1].plot(simulation_time,-3*agents_mc[mc_number][agent_idx].filter.updated_covs[:, idx, idx] ** .5, '--b')
+                axs1[index,index1].legend([f'Estimation','1 Sigma envelope','3 Sigma envelope'])
+                axs1[index,index1].set_xlabel('Time[Sec]')
+                axs1[index,index1].set_ylabel(unit_arr[index])
+                axs1[index,index1].set_title(f'{units[index]} estimation error')
+                axs1[index,index1].grid(color='k', linestyle='--', linewidth=.2)
 
-        fig.suptitle(f'Sensor estimation  Errors - X coordinates')
+        fig1.suptitle(f'Sensor estimation  Errors')
 
         # fig.suptitle(f'sonsor at position ({agents_mc[mc_number][agent_idx].position[0, 0]},'f'{agents_mc[mc_number][agent_idx].position[0, 1]}) estimation  Errors')
 
@@ -245,12 +308,14 @@ def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
     for agent_idx in range(agent_range[0], agent_range[1]):
         # plot XY
             ax = plt.figure().add_subplot()
-            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 2], 'r')
+            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 2], 'or')
             ax.plot(simulation_measurement_x, simulation_measurement_y, '--b')
+            for agent_idx2 in range(agent_range[0], agent_range[1]):
+                ax.plot(agents_mc[mc_number][agent_idx2].position[0,0] , agents_mc[mc_number][agent_idx2].position[0,1] , 'ok')
             ax.plot()
-            plt.legend(['X estimation', 'X real'])
+            plt.legend(['Estimated position', 'Real position' , 'Sensor location'])
             plt.title(
-                f'sensor at ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) XY state estimation')
+                f'sensor at ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) XY position estimation')
             plt.xlabel('X')
             plt.ylabel('Y')
             plt.grid(color='k', linestyle='--', linewidth=.2)
@@ -459,7 +524,7 @@ def plot_mc_estimation_error_all(mc_number, agent_idx, simulation_time, simulati
     return RMSE
 
 def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, simulation_measurement,
-                             number_of_mc_runs, experiments, start_index , mode, is_assim , path , state_index):
+                             number_of_mc_runs, experiments, start_index , mode, is_assim , path , state_index , angle_flag , distance_flag , assim_type):
     index = state_index
     state_arr = []
     err_arr = []
@@ -475,7 +540,7 @@ def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, sim
     mean_state = sum(state_arr) / (len(experiments)*number_of_agents)
     path = r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment'
     pd.DataFrame(mean_state).to_csv(os.path.
-                join(path , f'mean_state_assim_{is_assim}_agents_{number_of_agents}_num_of_mc_{number_of_mc_runs}.csv'))
+                join(path , f'mean_state_assim_{is_assim}_agents_{number_of_agents}_num_of_mc_{number_of_mc_runs}_angle_{angle_flag}_distance_{distance_flag}_assim_type_{assim_type}.csv'))
     plt.figure()
     plt.plot(simulation_time , simulation_measurement[index ,: ] , '--b')
     plt.plot(simulation_time , mean_state , 'r')
@@ -492,78 +557,55 @@ def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, sim
     plt.ylabel('Position [M]')
     plt.title('Sensors estimation error, assimilation Vs. mean ')
     plt.legend(['Real' , 'Estimation'])
-# y =np.array([0.245718385,
-# 0.137999378,
-# 0.091338511,
-# 0.047106525,
-# 0.036996647,
-# 0.026253146,
-# ])
-# x = np.array([
-# 1,
-# 2,
-# 4,
-# 8,
-# 16,
-# 32,
-#
-# ])
-# X_Y_Spline = make_interp_spline(x, y)
-# X_ = np.linspace(x[0], x[-1], 500)
-# Y_ = X_Y_Spline(X_)
-# plt.plot(X_, Y_)
-# plt.plot(x, y)
-# plt.title('Effect of sensor count on estimation quality')
-# plt.xlabel('Sensor count')
-# plt.ylabel('Estimation RMSE')
-# plt.grid()
-# plt.show()
-def print_sensors_error(T,X):
-    fig, axs = plt.subplots(2)
-    A1 = pd.read_csv(f'mean_state_assim_0_agents_2_num_of_mc_1.csv')
-    A2 = pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1.csv')
-    A5 = pd.read_csv(f'mean_state_assim_0_agents_4_num_of_mc_1.csv')
-    A6 = pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1.csv')
-    A7 = pd.read_csv(f'mean_state_assim_0_agents_6_num_of_mc_1.csv')
-    A8 = pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1.csv')
-    A9 = pd.read_csv(f'mean_state_assim_0_agents_8_num_of_mc_1.csv')
-    A10 = pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1.csv')
 
-    A3 = pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1.csv')
-    A4 = pd.read_csv(f'mean_state_assim_0_agents_10_num_of_mc_1.csv')
-    MSE2_assim = sum(((A2['0'] - X[0, :-1])**2)**0.5) / A2.shape[0]
-    MSE4_assim = sum(((A6['0'] - X[0, :-1])**2)**0.5) / A6.shape[0]
-    MSE6_assim = sum(((A8['0'] - X[0, :-1])**2)**0.5) / A8.shape[0]
-    MSE8_assim = sum(((A10['0'] - X[0, :-1])**2)**0.5) / A10.shape[0]
-    MSE10_assim = sum(((A3['0'] - X[0, :-1])**2)**0.5) / A3.shape[0]
-    MSE2_mean = sum(((A1['0'] - X[0])**2)**0.5) / A1.shape[0]
-    MSE4_mean = sum(((A5['0'] - X[0])**2)**0.5) / A5.shape[0]
-    MSE6_mean = sum(((A7['0'] - X[0])**2)**0.5) / A7.shape[0]
-    MSE8_mean = sum(((A9['0'] - X[0])**2)**0.5) / A9.shape[0]
-    MSE10_mean = sum(((A4['0'] - X[0])**2)**0.5) / A4.shape[0]
-    mse_arr = [MSE2_assim,
-    MSE4_assim,
-    MSE6_assim,
-    MSE8_assim,
-    MSE10_assim,
-    MSE2_mean,
-    MSE4_mean,
-    MSE6_mean,
-    MSE8_mean,
-    MSE10_mean]
-    # axs[0].plot(T ,A4['0'] - X[0], 'b' )
-    # axs[0].plot(T[:-1] ,A3['0'] - X[0, :-1],'r')
-    axs.plot([2,4,6,8,10]  ,mse_arr[5:],'b')
-    axs.plot([2,4,6,8,10] ,mse_arr[:5],'r')
-    # axs.plot(T[:-1] ,A3['0'] - X[0, :-1],'r')
-    # axs.plot(T ,A4['0'] - X[0],'b')
-    # axs[0].grid()
+def print_sensors_error(T,X):
+    fig, axs = plt.subplots(1)
+    runs_1_agents_2_article =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_2_mean =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_2_min_P =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+
+    runs_1_agents_4_article =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_4_mean =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_4_min_P =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+
+    runs_1_agents_6_article =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_6_mean =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_6_min_P =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+
+    runs_1_agents_8_article =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_8_mean =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_8_min_P =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+
+    runs_1_agents_10_article =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_10_mean =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_10_min_P =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+
+    article_MSE =[alg_utils.calc_MSE(runs_1_agents_2_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_article , X[0,:-1])]
+
+    mean_MSE = [alg_utils.calc_MSE(runs_1_agents_2_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_mean , X[0,:-1])]
+
+    min_P_MSE = [alg_utils.calc_MSE(runs_1_agents_2_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_min_P , X[0,:-1])]
+
+
+
+    axs.plot([2,4,6,8,10],article_MSE,'b')
+    axs.plot([2,4,6,8,10],mean_MSE,'r')
+    axs.plot([2,4,6,8,10],min_P_MSE,'k')
+
     axs.grid()
-    # axs[0].legend(['Sensors mean','Sensors assimilation'])
-    axs.legend(['Sensors mean','Sensors assimilation'])
-    # axs[0].set_title('Estimation error (Position X)')
-    axs.set_title('RMSE (Position X)')
-    # axs[0].set_xlabel('Time [S]')
-    # axs[0].set_ylabel('Position [M]')
+    axs.legend(['Sensors assimilation', 'Sensors mean','Sensors min covariance'])
+    axs.set_title('MSE (Position X)')
     axs.set_xlabel('Sensors count')
     axs.set_ylabel('Amplitude')

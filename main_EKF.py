@@ -1,5 +1,6 @@
 from scipy.integrate import solve_ivp
 import numpy as np
+import alg_utils
 from copy import copy , deepcopy
 from numpy import expand_dims ,squeeze , array , diag , eye , linspace
 from numpy.random import randn
@@ -13,10 +14,13 @@ from EKF_models import range_measurement_model_2d
 import noise_modeling
 import plots
 from time import time
+import random
 from plots import print_updated_state
 t_start = time()
-
-
+# seed_value = 2
+# random.seed(seed_value)
+# np.random.seed(seed_value)
+dtype = 'float16'
 
 # General parameters
 unit_arr= ['Position[M]' , 'Velocity[M/sec]' , 'Acceleration[M/sec^2]']
@@ -24,19 +28,22 @@ unit_arr= ['Position[M]' , 'Velocity[M/sec]' , 'Acceleration[M/sec^2]']
 #set filter params:
 # parameters to change:
 
-number_of_mc_runs = 1
-experiments = 1
-use_assimilation = 1 # use data fusion algorithm
+number_of_mc_runs = 10
+experiments = 10
+use_assimilation = 0 # use data fusion algorithm
 use_prediction = 1 # use the KF prediction step
 use_update = 1# use the KF upadte step
 iterations_between_updates = 1
+assim_type = 'article' # article or mean or min_P
 
+
+if use_assimilation == 0 : assim_type = 'none'
 # kalman filter params
 mode ='velocity'
 state_dim = 6 if mode == 'acceleration' else 4 # enter KF state vector length
 measurement_dim = 2 # enter KF measurement vector length
-process_noise_intensity = [10 , 10] #M^2 Enter minimum and maximum noise , the range between will be divided by experiment number
-measurement_noise_intensity = 0.001#M^2
+process_noise_intensity = [0 , 10] #M^2 Enter minimum and maximum noise , the range between will be divided by experiment number
+measurement_noise_intensity = 0.01#M^2
 x_index = 0  # enter the relevant state index of x
 y_index = 3 if mode == 'acceleration' else 2 # enter the relevant state index of y
 
@@ -68,12 +75,13 @@ simulation_input_type_y: str = 'step'
 
 
 # define agents parameters
-measurement_noise_limit_agent = np.array([[0.0001 , 100000000000]],dtype='float64')
-noise_factor_agent_coeff = 0.075  # sensor noise factor coeff (changes R as a function of distance and coeff)
-num_of_agents = 2
-init_agent_pos = np.linspace(0,25 ,num_of_agents )
+measurement_noise_limit_agent = np.array([[0.000 , 1000]],dtype=dtype)
+noise_factor_agent_coeff = 0.0075 # sensor noise factor coeff (changes R as a function of distance and coeff)
+num_of_agents = 1
+init_agent_pos = np.linspace(0,20 ,num_of_agents )
 #set agents positions uniformally
-agent_positions = np.array([[x,x+2] for x in init_agent_pos])
+agent_positions = np.array([[x,x] for x in init_agent_pos]) + randn(num_of_agents,2)*2
+agent_positions = [[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1]]
 agents = [Agent(np.array([[agent_positions[i][0], agent_positions[i][1]]]),[randn()*0, randn()*0, randn()*0] , measurement_noise_intensity , 0, id=i + 1) for i in range(num_of_agents)]
 
 
@@ -82,26 +90,26 @@ y_acc_intensity = .5
 
 # Define kalman filter properties
 sigma = 1**0.5
-R = eye(measurement_dim , dtype='float64') * measurement_noise_intensity #R Measurement noise covariance
-P = np.eye(state_dim,dtype='float64') * sigma**2  # Initial estimation error covariance - P
+R = eye(measurement_dim , dtype=dtype) * measurement_noise_intensity #R Measurement noise covariance
+P = np.eye(state_dim,dtype=dtype) * sigma**2  # Initial estimation error covariance - P
 if mode == 'velocity':
-    A = array([[0, 1 , 0 , 0],[0, 0 , 0 , 0] , [0 , 0 , 0 , 1 ],[0,0,0,0]] , dtype='float64') # F the process transformation matrix
+    A = array([[0, 1 , 0 , 0],[0, 0 , 0 , 0] , [0 , 0 , 0 , 1 ],[0,0,0,0]] , dtype=dtype) # F the process transformation matrix
     F = eye(state_dim)+A*dt # F the process transformation matrix
-    B = array([[0., x_acc_intensity , 0., y_acc_intensity]] , dtype='float64').T * dt  # Input matrix
-    G = array([[0, .0, 0, .0]] , dtype='float64').T * dt #Dynamic Model Noise
+    B = array([[0., x_acc_intensity , 0., y_acc_intensity]] , dtype=dtype).T * dt  # Input matrix
+    G = array([[0, .0, 0, .0]] , dtype=dtype).T * dt #Dynamic Model Noise
 
 elif mode == 'acceleration':
-    F = array([[1, dt+dt**2/2 , dt**2/2 , 0 , 0 , 0],[0, 1 , dt+dt**2/2 , 0, 0 , 0 ],[0,0,1,0,0,0] , [0 , 0 ,0 , 1 , dt+dt**2/2, dt**2/2],[0,0,0,0,1, dt+dt**2/2],[0,0,0,0,0,1]] , dtype='float64') # F the process transformation matrix
-    B = array([[0., 0.,x_acc_intensity, 0., 0.,y_acc_intensity]] , dtype='float64').T   # Input matrix
-    G = array([[0, .0, 0, .0, 0, 0]] , dtype='float64').T * dt #Dynamic Model Noise
-H = array([[]],dtype='float64') # H the measurements transformation matrix
+    F = array([[1, dt+dt**2/2 , dt**2/2 , 0 , 0 , 0],[0, 1 , dt+dt**2/2 , 0, 0 , 0 ],[0,0,1,0,0,0] , [0 , 0 ,0 , 1 , dt+dt**2/2, dt**2/2],[0,0,0,0,1, dt+dt**2/2],[0,0,0,0,0,1]] , dtype=dtype) # F the process transformation matrix
+    B = array([[0., 0.,x_acc_intensity, 0., 0.,y_acc_intensity]] , dtype=dtype).T   # Input matrix
+    G = array([[0, .0, 0, .0, 0, 0]] , dtype=dtype).T * dt #Dynamic Model Noise
+H = array([[]],dtype=dtype) # H the measurements transformation matrix
 
 initial_condition_X = [0 ,0 ,0]
 initial_condition_Y = [0 ,0 ,0]
-input_mat_X = array([[0., x_acc_intensity, 0.0]] , dtype='float64')
-noise_mat_X = array([[0., 0, 0.]] , dtype='float64')
-input_mat_Y = array([[0., y_acc_intensity, 0.0]] , dtype='float64')
-noise_mat_Y = array([[0., 0, 0.]] , dtype='float64')
+input_mat_X = array([[0., x_acc_intensity, 0.0]] , dtype=dtype)
+noise_mat_X = array([[0., 0, 0.]] , dtype=dtype)
+input_mat_Y = array([[0., y_acc_intensity, 0.0]] , dtype=dtype)
+noise_mat_Y = array([[0., 0, 0.]] , dtype=dtype)
 print('start simulating target')
 T , X = acceleration_model(t_start=t_initial , t_stop=t_final ,initial_cond=initial_condition_X,  input_type=simulation_input_type_x, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude, dt=dt , B=input_mat_X, G=noise_mat_X , t_transition=simulation_t_transition)
 T , Y = acceleration_model(t_start=t_initial , t_stop=t_final,initial_cond=initial_condition_Y, input_type=simulation_input_type_y, model_noise_var=simulation_process_noise, input_amplitude=simulation_input_amplitude , dt=dt , B=input_mat_Y, G=noise_mat_Y , t_transition=simulation_t_transition)
@@ -129,15 +137,15 @@ for experiment in range(experiments):
     for run in range(number_of_mc_runs):
         for agent in agents:
             agent.measure(np.array([X[0],Y[0]]) , noise_factor=noise_factor_agent_coeff, noise_limit = measurement_noise_limit_agent)
-            initial_state = array([[0 + randn() * sigma , 0.,0, 0 + randn() * sigma , 0.,0]], dtype='float64').T\
-                if mode == 'acceleration' else array([[0 + randn() * sigma , 0., 0 + randn() * sigma , 0.]], dtype='float64').T  # Initial state [x, y]
+            initial_state = array([[0 + randn() * sigma , 0.,0, 0 + randn() * sigma , 0.,0]], dtype=dtype).T\
+                if mode == 'acceleration' else array([[0 + randn() * sigma , 0., 0 + randn() * sigma , 0.]], dtype=dtype).T  # Initial state [x, y]
             # initialize KF
         for agent in agents:
             agent.filter = ExtendedKalmanFilter(x0 = initial_state,P =  P,Q =  Q,R =  R ,F = F , B = B , H = H ,u = u,dt = dt ,G=G )
 
         for measurement_index in range(len(agent.measurements)-1):
             for agent in agents:
-                angle_flag = 0
+                angle_flag = 1
                 distance_flag = 1
                 if angle_flag == 0 or distance_flag == 0:
                     measurement_dim = 1
@@ -166,7 +174,9 @@ for experiment in range(experiments):
             if agent.filter.counter % iterations_between_updates == 0:
                 if use_assimilation == 1:
                     for agent in agents:
-                        agent.filter.assimilate(agents)
+                        if assim_type == 'article': agent.filter.assimilate(agents)
+                        if assim_type == 'mean': agent.filter.assimilate_mean(agents)
+                        if assim_type == 'min_P':agent.filter.assimilate_min_P(agents)
 
 
             # rearrange data
@@ -185,8 +195,7 @@ for experiment in range(experiments):
                 agent.filter.assim_state = agent.filter.assim_state.reshape(int(len(agent.filter.assim_state)/state_dim), state_dim)
         agents_mc.append(deepcopy(agents))
     experiments_arr.append(deepcopy(agents_mc))
-    agents_mc=[]
-
+    # agents_mc=[]
 
 
 t_end = time()
@@ -195,12 +204,13 @@ print(f'process took {run_time} seconds')
 save_figs_mode = 0
 cutoff = -1 if use_assimilation == 1 else len(T)
 figs_path =r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\graphs'
-plots.print_sensors_error(T , X)
-plots.agents_mean_vs_agents_assim(mc_number=0 , number_of_agents=num_of_agents ,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 0  ,number_of_mc_runs= number_of_mc_runs , experiments = experiments_arr , mode = mode, is_assim = use_assimilation , path = figs_path, state_index = 0 , angle_flag = angle_flag , distance_flag = distance_flag)
-RMSE = plots.plot_mc_estimation_error_all(mc_number=0 ,agent_idx = 0,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 10  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr , mode = mode, is_assim = use_assimilation)
-# plots.plot_mc_estimation_error(mc_number=0,state_index = 0 ,agent_idx = 0,simulation_time = T ,simulation_measurement = X[0] , start_index = 50  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr)
+# plots.agents_mean_vs_agents_assim(mc_number=0 , number_of_agents=num_of_agents ,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 0  ,number_of_mc_runs= number_of_mc_runs , experiments = experiments_arr , mode = mode, is_assim = use_assimilation , path = figs_path, state_index = 0 , angle_flag = angle_flag , distance_flag = distance_flag , assim_type = assim_type)
+plots.print_updated_covariance(mc_number=0, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=np.concatenate((X[:-1,:],Y[:-1,:]),axis=0) , simulation_time=T , mode = mode)
 plots.print_updated_state(mc_number=0, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X , simulation_time=T , mode = mode ,save_figs=save_figs_mode , fig_save_path=figs_path)
-plots.print_updated_covariance(mc_number=1, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X , simulation_time=T , mode = mode)
+alg_utils.select_min_P_position_sensor(agents_mc[0])
+plots.print_sensors_error(T , X)
+RMSE = plots.plot_mc_estimation_error_all(mc_number=0 ,agent_idx = 0,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 10  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr , mode = mode, is_assim = use_assimilation)
+plots.plot_mc_estimation_error(mc_number=0,state_index = 0 ,agent_idx = 0,simulation_time = T ,simulation_measurement = X[0] , start_index = 50  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr)
 
 plots.print_measurement_comparison(agents_mc=experiments_arr[0],mc_number=0,agent_range=[0,10],simulation_time=T)
 
