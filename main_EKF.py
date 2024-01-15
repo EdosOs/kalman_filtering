@@ -16,10 +16,11 @@ import plots
 from time import time
 import random
 from plots import print_updated_state
+print('start')
 t_start = time()
-# seed_value = 2
-# random.seed(seed_value)
-# np.random.seed(seed_value)
+seed_value = 5
+random.seed(seed_value)
+np.random.seed(seed_value)
 dtype = 'float16'
 
 # General parameters
@@ -28,9 +29,9 @@ unit_arr= ['Position[M]' , 'Velocity[M/sec]' , 'Acceleration[M/sec^2]']
 #set filter params:
 # parameters to change:
 
-number_of_mc_runs = 10
-experiments = 10
-use_assimilation = 0 # use data fusion algorithm
+number_of_mc_runs = 1
+experiments = 1
+use_assimilation = 1 # use data fusion algorithm
 use_prediction = 1 # use the KF prediction step
 use_update = 1# use the KF upadte step
 iterations_between_updates = 1
@@ -42,11 +43,11 @@ if use_assimilation == 0 : assim_type = 'none'
 mode ='velocity'
 state_dim = 6 if mode == 'acceleration' else 4 # enter KF state vector length
 measurement_dim = 2 # enter KF measurement vector length
-process_noise_intensity = [0 , 10] #M^2 Enter minimum and maximum noise , the range between will be divided by experiment number
-measurement_noise_intensity = 0.01#M^2
+process_noise_intensity = [10 , 10] #M^2 Enter minimum and maximum noise , the range between will be divided by experiment number
+measurement_noise_intensity = 0.1#
 x_index = 0  # enter the relevant state index of x
 y_index = 3 if mode == 'acceleration' else 2 # enter the relevant state index of y
-
+distance_factor = 1
 
 
 # simulation params
@@ -61,7 +62,7 @@ experiments_arr = []
 process_noise_intensity_arr = np.linspace(process_noise_intensity[0], process_noise_intensity[1], experiments)
 #define simulation parameters
 steps = int((t_final-t_initial)/dt)
-
+agent_distance_from_line = 0.9
 
 
 simulation_process_noise =0
@@ -76,12 +77,19 @@ simulation_input_type_y: str = 'step'
 
 # define agents parameters
 measurement_noise_limit_agent = np.array([[0.000 , 1000]],dtype=dtype)
-noise_factor_agent_coeff = 0.0075 # sensor noise factor coeff (changes R as a function of distance and coeff)
-num_of_agents = 1
-init_agent_pos = np.linspace(0,20 ,num_of_agents )
+noise_factor_agent_coeff = 0.01 # sensor noise factor coeff (changes R as a function of distance and coeff)
+num_of_agents = 5
+init_agent_pos = np.linspace(0,20*distance_factor ,num_of_agents )
 #set agents positions uniformally
-agent_positions = np.array([[x,x] for x in init_agent_pos]) + randn(num_of_agents,2)*2
-agent_positions = [[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1],[-1,1]]
+agent_positions = np.array([])
+for idx in range(num_of_agents):
+    if idx%2 != 0:
+        agent_positions = np.append(agent_positions , np.array([init_agent_pos[idx] , init_agent_pos[idx] + agent_distance_from_line]))
+    else:
+        agent_positions = np.append(agent_positions , np.array([init_agent_pos[idx] , init_agent_pos[idx] + agent_distance_from_line]))
+agent_positions = np.reshape(agent_positions,[num_of_agents,2])
+# agent_positions = np.array([[x,x] for x in init_agent_pos])
+# agent_positions = [[5,35], [15 , 0],[5,1],[6,0],[10,17],[12,8],[10,15],[17,11],[18,23],[13,9],[20,26]]
 agents = [Agent(np.array([[agent_positions[i][0], agent_positions[i][1]]]),[randn()*0, randn()*0, randn()*0] , measurement_noise_intensity , 0, id=i + 1) for i in range(num_of_agents)]
 
 
@@ -146,7 +154,7 @@ for experiment in range(experiments):
         for measurement_index in range(len(agent.measurements)-1):
             for agent in agents:
                 angle_flag = 1
-                distance_flag = 1
+                distance_flag = 0
                 if angle_flag == 0 or distance_flag == 0:
                     measurement_dim = 1
 
@@ -204,31 +212,27 @@ print(f'process took {run_time} seconds')
 save_figs_mode = 0
 cutoff = -1 if use_assimilation == 1 else len(T)
 figs_path =r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\graphs'
-# plots.agents_mean_vs_agents_assim(mc_number=0 , number_of_agents=num_of_agents ,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 0  ,number_of_mc_runs= number_of_mc_runs , experiments = experiments_arr , mode = mode, is_assim = use_assimilation , path = figs_path, state_index = 0 , angle_flag = angle_flag , distance_flag = distance_flag , assim_type = assim_type)
-plots.print_updated_covariance(mc_number=0, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=np.concatenate((X[:-1,:],Y[:-1,:]),axis=0) , simulation_time=T , mode = mode)
+plots.agents_mean_vs_agents_assim(mc_number=0 , number_of_agents=num_of_agents ,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 1  ,number_of_mc_runs= number_of_mc_runs , experiments = experiments_arr , mode = mode, is_assim = use_assimilation , path = figs_path, state_index = 0 , angle_flag = angle_flag , distance_flag = distance_flag , assim_type = assim_type , line_distance = agent_distance_from_line)
+
+RMSE = plots.plot_mc_estimation_error_all(mc_number=0 ,agent_idx = 0,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 10  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr , mode = mode, is_assim = use_assimilation)
+plots.print_xy_assim(mc_number=0  , agent_range=[0,num_of_agents] , agents_mc=experiments_arr[0] , simulation_measurement_x=X[0,10:], simulation_measurement_y=Y[0,10:] , start_idx = 10 ,mode = mode)
 plots.print_updated_state(mc_number=0, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X , simulation_time=T , mode = mode ,save_figs=save_figs_mode , fig_save_path=figs_path)
+plots.print_updated_covariance(mc_number=0, agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=np.concatenate((X[:-1,:],Y[:-1,:]),axis=0) , simulation_time=T , mode = mode)
 alg_utils.select_min_P_position_sensor(agents_mc[0])
 plots.print_sensors_error(T , X)
-RMSE = plots.plot_mc_estimation_error_all(mc_number=0 ,agent_idx = 0,simulation_time = T[:cutoff] ,simulation_measurement = X[:,:cutoff], start_index = 10  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr , mode = mode, is_assim = use_assimilation)
 plots.plot_mc_estimation_error(mc_number=0,state_index = 0 ,agent_idx = 0,simulation_time = T ,simulation_measurement = X[0] , start_index = 50  ,number_of_mc_runs= number_of_mc_runs,Q_arr = process_noise_intensity_arr , experiments = experiments_arr)
 
 plots.print_measurement_comparison(agents_mc=experiments_arr[0],mc_number=0,agent_range=[0,10],simulation_time=T)
 
-plots.print_assimilated_state(mc_number=0 , state_index= 2 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[:,:-1] , simulation_time=T[:-1] , mode = mode , save_figs=save_figs_mode ,fig_save_path = figs_path)
-plots.print_assimilated_covariance(mc_number=0 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[:,:-1] , simulation_time=T[:-1] , mode = mode)
-#
-plots.print_predicted_state(mc_number=0 , state_index= 0 , agent_range=[0,4] , agents_mc=experiments_arr[0] , simulation_measurement=X[0] , simulation_time=T)
-plots.print_predicted_covariance(mc_number=0 , state_index= 0 , agent_range=[0,4] , agents_mc=experiments_arr[0] , simulation_measurement=X[0]  , simulation_time=T)
-
-plots.plot_estimation_error(mc_number=0 , state_index= 0 , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement=X[0] , simulation_time=T)
-plots.print_predicted_state(mc_number=0 , state_index= 2 , agent_range=[0,4] , agents_mc=experiments_arr[0] , simulation_measurement=Y[0] , simulation_time=T)
+plots.print_assimilated_state(mc_number=0 , state_index= 2 , agent_range=[0,1] , agents_mc=experiments_arr[0] , simulation_measurement=X[:,:-1] , simulation_time=T[:-1] , mode = mode , save_figs=save_figs_mode ,fig_save_path = figs_path)
+plots.print_assimilated_covariance(mc_number=0 , agent_range=[0,1] , agents_mc=experiments_arr[0] , simulation_measurement=X[:,:-1] , simulation_time=T[:-1] , mode = mode)
 
 plots.plot_R_Q(mc_number=0 , state_index= 0 , agent_range=[0,1] , agents_mc=experiments_arr[0] , simulation_time=T[:-1])
 
 plots.print_xy(mc_number=0  , agent_range=[0,10] , agents_mc=experiments_arr[0] , simulation_measurement_x=X[0,10:], simulation_measurement_y=Y[0,10:] , start_idx = 10 ,mode = mode)
 plots.print_3d(mc_number=0  , agent_range=[0,4] , agents_mc=experiments_arr[0] , simulation_measurement_x=X[0,10:], simulation_measurement_y=Y[0,10:] , simulation_time=T[10:],start_index = 10 )
 print('done')
-
+plots.two_STD_graphs(T)
 mean_state = 0
 theoretical_P_mean = []
 

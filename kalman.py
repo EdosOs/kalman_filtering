@@ -5,7 +5,7 @@ from numpy.linalg import inv , solve
 from numpy import array , diag , exp , pi
 from EKF_models import range_measurement_model_2d
 from copy import copy , deepcopy
-from math import sqrt , atan2
+from math import sqrt , atan2 , atan
 from scipy.integrate import solve_ivp
 # from Assimilation import assimilate
 dtype = 'float16'
@@ -107,7 +107,7 @@ class KalmanFilterInfo(KalmanFilter):
         self.assim_covs = np.append(self.assim_covs ,self.P.copy())
 
     def assimilate_mean(self , agents):
-        self.P = alg_utils.matrix_arr_mean(np.array([agent.filter.P for agent in agents]))
+        # self.P = alg_utils.matrix_arr_mean(np.array([agent.filter.P for agent in agents]))
         self.state = alg_utils.matrix_arr_mean(np.array([agent.filter.update_state for agent in agents]))
         self.assim_state = np.append(self.assim_state , self.state.copy())
         self.assim_covs = np.append(self.assim_covs ,self.P.copy())

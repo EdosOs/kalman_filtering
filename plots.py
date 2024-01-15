@@ -7,10 +7,11 @@ import pandas as pd
 from numpy import squeeze
 from scipy.interpolate import make_interp_spline
 
+units = ['Position', 'Velocity', 'Acceleration']
 
 unit_arr= ['Position[M]' , 'Velocity[M/sec]' , 'Acceleration[M/sec^2]']
 # plot noised measurements vs original measurements
-def print_measurement_comparison(agents_mc, mc_number, agent_range, simulation_time):
+def Fprint_measurement_comparison(agents_mc, mc_number, agent_range, simulation_time):
     for agent_idx in range(agent_range[0], agent_range[1]):
         ax = plt.figure().add_subplot()
         ax.plot(simulation_time, agents_mc[mc_number][agent_idx].measurements, 'r')
@@ -40,36 +41,36 @@ def print_residual(agents_mc, mc_number, agent_range, simulation_time, measureme
 def print_updated_state(mc_number, agent_range, agents_mc, simulation_time, simulation_measurement , mode , save_figs , fig_save_path):
     for agent_idx in range(agent_range[0], agent_range[1]):
         # plot X
-        fig, axs = plt.subplots(3)
+        # fig, axs = plt.subplots(3)
         fig1, axs1 = plt.subplots(3,2)
-        axs[0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], 'r')
-        axs[1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 1], 'r')
-        if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
-
-        axs[0].plot(simulation_time, simulation_measurement[0], '--b')
-        axs[1].plot(simulation_time, simulation_measurement[1], '--b')
-        axs[2].plot(simulation_time, simulation_measurement[2], '--b')
-
-        axs[0].legend([' Estimation', ' Real'])
-        axs[1].legend([' Estimation', ' Real'])
-        axs[2].legend([' Real'])
-        axs[0].set_xlabel('Time[Sec]')
-        axs[0].set_ylabel(unit_arr[0])
-        axs[1].set_xlabel('Time[Sec]')
-        axs[1].set_ylabel(unit_arr[1])
-        axs[2].set_xlabel('Time[Sec]')
-        axs[2].set_ylabel(unit_arr[2])
-
-        axs[0].set_title('Position')
-        axs[1].set_title('Velocity')
-        axs[2].set_title('Acceleration')
-
-        axs[0].grid(color='k', linestyle='--', linewidth=.2)
-        axs[1].grid(color='k', linestyle='--', linewidth=.2)
-        axs[2].grid(color='k', linestyle='--', linewidth=.2)
-        plt.subplots_adjust(hspace=0.75)
-        fig.set_size_inches((8.5, 11), forward=False)
-        fig.suptitle(f'State estimation')
+        # axs[0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], 'r')
+        # axs[1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 1], 'r')
+        # if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
+        #
+        # axs[0].plot(simulation_time, simulation_measurement[0], '--b')
+        # axs[1].plot(simulation_time, simulation_measurement[1], '--b')
+        # axs[2].plot(simulation_time, simulation_measurement[2], '--b')
+        #
+        # axs[0].legend([' Estimation', ' Real'])
+        # axs[1].legend([' Estimation', ' Real'])
+        # axs[2].legend([' Real'])
+        # axs[0].set_xlabel('Time[Sec]')
+        # axs[0].set_ylabel(unit_arr[0])
+        # axs[1].set_xlabel('Time[Sec]')
+        # axs[1].set_ylabel(unit_arr[1])
+        # axs[2].set_xlabel('Time[Sec]')
+        # axs[2].set_ylabel(unit_arr[2])
+        #
+        # axs[0].set_title('Position')
+        # axs[1].set_title('Velocity')
+        # axs[2].set_title('Acceleration')
+        #
+        # axs[0].grid(color='k', linestyle='--', linewidth=.2)
+        # axs[1].grid(color='k', linestyle='--', linewidth=.2)
+        # axs[2].grid(color='k', linestyle='--', linewidth=.2)
+        # plt.subplots_adjust(hspace=0.75)
+        # fig.set_size_inches((8.5, 11), forward=False)
+        # fig.suptitle(f'State estimation')
 
         axs1[0,0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 0], 'r')
         axs1[1,0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 1], 'r')
@@ -127,7 +128,6 @@ def print_updated_state(mc_number, agent_range, agents_mc, simulation_time, simu
             fig.savefig(os.path.join(fig_save_path , f'agent{agent_idx}') , bbox_inches='tight' , dpi = 500)
 def print_updated_covariance(mc_number, agent_range, agents_mc, simulation_time,
                             simulation_measurement , mode):
-    units = ['Position' , 'Velocity' , 'Acceleration']
     for agent_idx in range(agent_range[0], agent_range[1]):
         num_of_subplots = 3 if mode == 'acceleration' else 2
         # fig, axs = plt.subplots(num_of_subplots)
@@ -200,82 +200,41 @@ def print_predicted_covariance(mc_number, state_index, agent_range, agents_mc, s
         plt.show()
 
 def print_assimilated_state(mc_number, state_index, agent_range, agents_mc, simulation_time, simulation_measurement , mode, save_figs , fig_save_path):
-    # for agent_idx in range(agent_range[0], agent_range[1]):
-    #     # plot X
-    #     ax = plt.figure().add_subplot()
-    #     ax.plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[:, state_index], 'r')
-    #     ax.plot(simulation_time, simulation_measurement, '--r')
-    #     plt.legend(['X estimation', 'X real'])
-    #     plt.title(
-    #         f'agent {agents_mc[mc_number][agent_idx].id} at position ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) X state estimation (assim) and measurements')
-    #     plt.xlabel('time')
-    #     plt.ylabel('amplitude')
-    #     plt.show()
-    # for agent_idx in range(agent_range[0], agent_range[1]):
-    #     # plot X
-    #     num_of_subplots = 3 if mode == 'acceleration' else 2
-    #     fig, axs = plt.subplots(num_of_subplots)
-    #     for index in range(num_of_subplots):
-    #
-    #         axs[index].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[:, index], 'r')
-    #         # axs[index].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, index], 'r')
-    #         # if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
-    #
-    #         axs[index].plot(simulation_time, simulation_measurement[index], '--r')
-    #
-    #
-    #         if index == 0:
-    #             axs[0].legend(['X position estimation', 'X position real'])
-    #         if index == 1:
-    #             axs[1].legend(['X velocity estimation', 'X velocity real'])
-    #         if index == 2:
-    #             axs[2].legend(['X acceleration estimation', 'X acceleration real'])
-    #         axs[index].set_xlabel('Time[Sec]')
-    #         axs[index].set_ylabel(unit_arr[index])
-    #         # if mode == 'acceleration' :axs[2].set_xlabel('Time[Sec]')
-    #         # if mode == 'acceleration' :axs[2].set_ylabel(unit_arr[2])
-    #
-    #         axs[index].set_title('Position estimation vs simulation')
-    #
-    #
-    #         axs[index].grid(color='k', linestyle='--', linewidth=.2)
-
-        # fig.suptitle(f'agent {agents_mc[mc_number][agent_idx].id} state estimation vs simulation data')
 
     for agent_idx in range(agent_range[0], agent_range[1]):
         # plot X
-        fig, axs = plt.subplots(3)
+        fig, axs = plt.subplots(2)
         axs[0].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[:, 0], 'r')
         axs[1].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[:, 1], 'r')
-        if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
+        # if mode == 'acceleration' :axs[2].plot(simulation_time, squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[:, 2], 'r')
 
         axs[0].plot(simulation_time, simulation_measurement[0], '--b')
         axs[1].plot(simulation_time, simulation_measurement[1], '--b')
-        axs[2].plot(simulation_time, simulation_measurement[2], '--b')
+        # axs[2].plot(simulation_time, simulation_measurement[2], '--b')
 
-        axs[0].legend(['X position estimation', 'X position real'])
-        axs[1].legend(['X velocity estimation', 'X velocity real'])
-        axs[2].legend([ 'X acceleration real'])
+        axs[0].legend([' estimation', ' real'])
+        axs[1].legend([' estimation', ' real'])
+        # axs[2].legend([ 'acceleration real'])
         axs[0].set_xlabel('Time[Sec]')
         axs[0].set_ylabel(unit_arr[0])
         axs[1].set_xlabel('Time[Sec]')
         axs[1].set_ylabel(unit_arr[1])
-        axs[2].set_xlabel('Time[Sec]')
-        axs[2].set_ylabel(unit_arr[2])
+        # axs[2].set_xlabel('Time[Sec]')
+        # axs[2].set_ylabel(unit_arr[2])
         # if mode == 'acceleration' :axs[2].set_xlabel('Time[Sec]')
         # if mode == 'acceleration' :axs[2].set_ylabel(unit_arr[2])
 
-        axs[0].set_title('Position estimation vs simulation')
-        axs[1].set_title('Velocity estimation vs simulation')
-        axs[2].set_title('Acceleration estimation vs simulation')
+        axs[0].set_title('Position estimation - X')
+        axs[1].set_title('Velocity estimation - X')
+        # axs[2].set_title('Acceleration')
 
         axs[0].grid(color='k', linestyle='--', linewidth=.2)
         axs[1].grid(color='k', linestyle='--', linewidth=.2)
-        axs[2].grid(color='k', linestyle='--', linewidth=.2)
+        # axs[2].grid(color='k', linestyle='--', linewidth=.2)
         plt.subplots_adjust(hspace=0.5)
         fig.set_size_inches((18.5, 11), forward=False)
 
-        fig.suptitle(f'agent {agents_mc[mc_number][agent_idx].id} at position ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) state estimation vs simulation data')
+        fig.suptitle(f'Assimilation state estimation ')
         if save_figs == 1:
             # manager = plt.get_current_fig_manager()
             # manager.resize(*manager.window.maxsize())
@@ -283,24 +242,26 @@ def print_assimilated_state(mc_number, state_index, agent_range, agents_mc, simu
 
 def print_assimilated_covariance(mc_number, agent_range, agents_mc, simulation_time,
                             simulation_measurement , mode):
+    units = ['Position', 'Velocity', 'Acceleration']
+
     for agent_idx in range(agent_range[0], agent_range[1]):
         num_of_subplots = 3 if mode == 'acceleration' else 2
         fig, axs = plt.subplots(num_of_subplots)
         for index in range(num_of_subplots):
             axs[index].plot(simulation_time,simulation_measurement[index]-squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[:, index] , 'r')
             axs[index].plot(simulation_time,agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--k')
-            axs[index].plot(simulation_time,3*agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--k')
+            axs[index].plot(simulation_time,3*agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--b')
             axs[index].plot(simulation_time,-agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--k')
-            axs[index].plot(simulation_time,-3*agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--k')
-            axs[index].legend([f'X {index+1}state','1 Sigma envelope','3 Sigma envelope'])
+            axs[index].plot(simulation_time,-3*agents_mc[mc_number][agent_idx].filter.assim_covs[:, index, index] ** .5, '--b')
+            axs[index].legend([f'Estimation error','1 Sigma envelope','3 Sigma envelope'])
             axs[index].set_xlabel('Time[Sec]')
             axs[index].set_ylabel(unit_arr[index])
-            axs[index].set_title(f'X {index+1} state estimation error in 1,3 Sigma envelopes')
+            axs[index].set_title(f'{units[index]} estimation error - X')
             axs[index].grid(color='k', linestyle='--', linewidth=.2)
-            axs[index].set_ylim([-1, 1])
+            # axs[index].set_ylim([-1, 1])
 
 
-        fig.suptitle(f'agent {agents_mc[mc_number][agent_idx].id} at ({agents_mc[mc_number][agent_idx].position[0, 0]},'f'{agents_mc[mc_number][agent_idx].position[0, 1]}) X state estimation (assim) Errors')
+        fig.suptitle(f'Assimilation state estimation Errors')
 
 def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
                             simulation_measurement_y , start_idx,mode):
@@ -308,11 +269,13 @@ def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
     for agent_idx in range(agent_range[0], agent_range[1]):
         # plot XY
             ax = plt.figure().add_subplot()
-            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.predicted_state)[start_idx:, 2], 'or')
+            ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.updated_state)[start_idx:, 2], 'or')
             ax.plot(simulation_measurement_x, simulation_measurement_y, '--b')
             for agent_idx2 in range(agent_range[0], agent_range[1]):
-                ax.plot(agents_mc[mc_number][agent_idx2].position[0,0] , agents_mc[mc_number][agent_idx2].position[0,1] , 'ok')
-            ax.plot()
+                try:
+                    ax.plot(agents_mc[mc_number][agent_idx2].position[0,0] , agents_mc[mc_number][agent_idx2].position[0,1] , 'ok')
+                except:
+                    pass
             plt.legend(['Estimated position', 'Real position' , 'Sensor location'])
             plt.title(
                 f'sensor at ({agents_mc[mc_number][agent_idx].position[0, 0]},{agents_mc[mc_number][agent_idx].position[0, 1]}) XY position estimation')
@@ -320,6 +283,24 @@ def print_xy(mc_number, agent_range, agents_mc, simulation_measurement_x,
             plt.ylabel('Y')
             plt.grid(color='k', linestyle='--', linewidth=.2)
             plt.show()
+
+def print_xy_assim(mc_number, agent_range, agents_mc, simulation_measurement_x,
+                            simulation_measurement_y , start_idx,mode):
+    y_position_state = 2 if mode == 'velocity' else 3
+    for agent_idx in range(agent_range[0], agent_range[1]):
+        # plot XY
+        ax = plt.figure().add_subplot()
+        ax.plot(squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[start_idx:, 0], squeeze(agents_mc[mc_number][agent_idx].filter.assim_state)[start_idx:, 2], 'or')
+        ax.plot(simulation_measurement_x, simulation_measurement_y, '--b')
+        for agent_idx2 in range(agent_range[0], agent_range[1]):
+            ax.plot(agents_mc[mc_number][agent_idx2].position[0,0] , agents_mc[mc_number][agent_idx2].position[0,1] , 'ok')
+        plt.legend(['Estimated position', 'Real position' , 'Sensor location'])
+        plt.title(
+            f'XY Position estimation')
+        plt.xlabel('X [M]')
+        plt.ylabel('Y [M]')
+        plt.grid(color='k', linestyle='--', linewidth=.2)
+        plt.show()
 
 
 
@@ -488,11 +469,15 @@ def plot_mc_estimation_error_all(mc_number, agent_idx, simulation_time, simulati
             axs2.plot(simulation_time , MC_err_mean[0 ,0, :])
 
 
+
         MC_P_std = [np.std(estimation_error, axis=0) for estimation_error in estimation_error_arr]
         axs[index].plot(simulation_time, MC_P_std[mc_number], 'b')
         axs[index].plot(simulation_time,theoretical_P_mean[mc_number], '--k')
-        axs[index].plot(simulation_time,-theoretical_P_mean[mc_number], '--k')
-        axs[index].set_ylabel('unit_arr[index]')
+        # if index == 1:
+            # pd.DataFrame(MC_P_std[mc_number]).to_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\STD_OF_MC_five_sensors_vel_assim.csv')
+            # pd.DataFrame(theoretical_P_mean[mc_number]).to_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\P_five_sensors_vel_assim.csv')
+        # axs[index].plot(simulation_time,-theoretical_P_mean[mc_number], '--k')
+        axs[index].set_ylabel(f'{unit_arr[index]}')
         axs[index].set_xlabel('Time[Sec]')
         if index == 0:
             axs[index].set_title('MC Position estimation error')
@@ -503,7 +488,7 @@ def plot_mc_estimation_error_all(mc_number, agent_idx, simulation_time, simulati
 
         axs[index].grid(color='k', linestyle='--', linewidth=.2)
         axs[index].legend(['MC calculated STD', '1 Sigma envelope'])
-        fig.suptitle(f'agent MC calculated estimation error vs. theoretically calculated estimation error')
+        fig.suptitle(f'Estimation statistics: MC estimation error')
 
         # plt.suptitle('MC Estimation errors')
 
@@ -524,7 +509,8 @@ def plot_mc_estimation_error_all(mc_number, agent_idx, simulation_time, simulati
     return RMSE
 
 def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, simulation_measurement,
-                             number_of_mc_runs, experiments, start_index , mode, is_assim , path , state_index , angle_flag , distance_flag , assim_type):
+                             number_of_mc_runs, experiments, start_index , mode, is_assim , path , state_index ,
+                                angle_flag , distance_flag , assim_type , line_distance):
     index = state_index
     state_arr = []
     err_arr = []
@@ -538,9 +524,9 @@ def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, sim
                                            for run in range(number_of_mc_runs)]))/number_of_mc_runs)
 
     mean_state = sum(state_arr) / (len(experiments)*number_of_agents)
-    path = r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment'
+    path = r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures'
     pd.DataFrame(mean_state).to_csv(os.path.
-                join(path , f'mean_state_assim_{is_assim}_agents_{number_of_agents}_num_of_mc_{number_of_mc_runs}_angle_{angle_flag}_distance_{distance_flag}_assim_type_{assim_type}.csv'))
+                join(path , f'mean_state_assim_{is_assim}_agents_{number_of_agents}_num_of_mc_{number_of_mc_runs}_angle_{angle_flag}_distance_{distance_flag}_assim_type_{assim_type}_state_index_{index}_line_distance_{line_distance}.csv'))
     plt.figure()
     plt.plot(simulation_time , simulation_measurement[index ,: ] , '--b')
     plt.plot(simulation_time , mean_state , 'r')
@@ -559,53 +545,350 @@ def agents_mean_vs_agents_assim(mc_number,number_of_agents, simulation_time, sim
     plt.legend(['Real' , 'Estimation'])
 
 def print_sensors_error(T,X):
-    fig, axs = plt.subplots(1)
-    runs_1_agents_2_article =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
-    runs_1_agents_2_mean =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
-    runs_1_agents_2_min_P =pd.read_csv(f'mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    fig, axs = plt.subplots(2)
+    fig1 , axs1 = plt.subplots(2)
 
-    runs_1_agents_4_article =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
-    runs_1_agents_4_mean =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
-    runs_1_agents_4_min_P =pd.read_csv(f'mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    no_angle_dist_05_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_0.5.csv')
+    no_angle_dist_06_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_0.6.csv')
+    no_angle_dist_07_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_0.7.csv')
+    no_angle_dist_08_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_0.8.csv')
+    no_angle_dist_09_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_0.9.csv')
+    no_angle_dist_1_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_1.csv')
+    no_angle_dist_2_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_2.csv')
+    no_angle_dist_3_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_3.csv')
+    no_angle_dist_4_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_4.csv')
+    no_angle_dist_5_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_5.csv')
+    no_angle_dist_10_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_10.csv')
+    no_angle_dist_15_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_15.csv')
+    no_angle_dist_20_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_20.csv')
+    no_angle_dist_25_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_25.csv')
+    no_angle_dist_30_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_30.csv')
+    no_angle_dist_35_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_35.csv')
+    no_angle_dist_40_pos =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_0_line_distance_40.csv')
 
-    runs_1_agents_6_article =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
-    runs_1_agents_6_mean =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
-    runs_1_agents_6_min_P =pd.read_csv(f'mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    no_angle_dist_05_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_06_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_07_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_08_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_09_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_1_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_1.csv')
+    no_angle_dist_2_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_2.csv')
+    no_angle_dist_3_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_3.csv')
+    no_angle_dist_4_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_4.csv')
+    no_angle_dist_5_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_5.csv')
+    no_angle_dist_10_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_10.csv')
+    no_angle_dist_15_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_15.csv')
+    no_angle_dist_20_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_20.csv')
+    no_angle_dist_25_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_25.csv')
+    no_angle_dist_30_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_30.csv')
+    no_angle_dist_35_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_35.csv')
+    no_angle_dist_40_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_0_assim_type_article_state_index_1_line_distance_40.csv')
 
-    runs_1_agents_8_article =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
-    runs_1_agents_8_mean =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
-    runs_1_agents_8_min_P =pd.read_csv(f'mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
 
-    runs_1_agents_10_article =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
-    runs_1_agents_10_mean =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
-    runs_1_agents_10_min_P =pd.read_csv(f'mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_2_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_2_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_2_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_2_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_3_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_3_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_3_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_3_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_3_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_3_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_3_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_3_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_4_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_4_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_4_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_4_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_5_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_5_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_5_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_5_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_5_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_6_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_6_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_6_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_6_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_7_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_7_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_7_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_7_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_7_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_7_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_7_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_7_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_8_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_8_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_8_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_8_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_9_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_9_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_9_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_9_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_9_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_9_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_9_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_9_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_10_article =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_article.csv')
+    runs_1_agents_10_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    runs_1_agents_10_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    runs_1_agents_10_mean_no_assim =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_0.csv')
+
+    runs_1_agents_2_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_3_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_3_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_4_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_5_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_5_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_6_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_7_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_7_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_8_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_9_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_9_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+    runs_1_agents_10_mean_no_covs =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_0_no_covs.csv')
+
+
+
+    runs_1_agents_2_article_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_article_state_index_1.csv')
+    runs_1_agents_4_article_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_article_state_index_1.csv')
+    runs_1_agents_6_article_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_article_state_index_1.csv')
+    runs_1_agents_8_article_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_article_state_index_1.csv')
+    runs_1_agents_10_article_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_article_state_index_1.csv')
+
+    runs_1_agents_2_mean_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1.csv')
+    runs_1_agents_4_mean_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1.csv')
+    runs_1_agents_6_mean_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1.csv')
+    runs_1_agents_8_mean_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1.csv')
+    runs_1_agents_10_mean_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1.csv')
+
+    runs_1_agents_2_min_P_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_min_P_state_index_1.csv')
+    runs_1_agents_4_min_P_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_min_P_state_index_1.csv')
+    runs_1_agents_6_min_P_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_min_P_state_index_1.csv')
+    runs_1_agents_8_min_P_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_min_P_state_index_1.csv')
+    runs_1_agents_10_min_P_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_min_P_state_index_1.csv')
+
+    runs_1_agents_2_mean_no_assim_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_1.csv')
+    runs_1_agents_4_mean_no_assim_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_1.csv')
+    runs_1_agents_6_mean_no_assim_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_1.csv')
+    runs_1_agents_8_mean_no_assim_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_1.csv')
+    runs_1_agents_10_mean_no_assim_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_0_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_none_state_index_1.csv')
+
+    runs_1_agents_2_mean_no_covs_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_2_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1_no_covs.csv')
+    runs_1_agents_4_mean_no_covs_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_4_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1_no_covs.csv')
+    runs_1_agents_6_mean_no_covs_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_6_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1_no_covs.csv')
+    runs_1_agents_8_mean_no_covs_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_8_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1_no_covs.csv')
+    runs_1_agents_10_mean_no_covs_vel =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean_state_index_1_no_covs.csv')
+
+
+
+    # runs_1_agents_10_mean =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_mean.csv')
+    # runs_1_agents_10_min_P =pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\mean_state_assim_1_agents_10_num_of_mc_1_angle_1_distance_1_assim_type_min_P.csv')
+    article_MSE_vel = [
+                 alg_utils.calc_MSE(runs_1_agents_2_article_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_article_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_article_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_article_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_article_vel , X[1,:-1])]
+    mean_MSE_no_covs_vel =[
+                 alg_utils.calc_MSE(runs_1_agents_2_mean_no_covs_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_mean_no_covs_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_mean_no_covs_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_mean_no_covs_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_mean_no_covs_vel , X[1,:-1])]
+    mean_MSE_vel = [
+             alg_utils.calc_MSE(runs_1_agents_2_mean_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_4_mean_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_6_mean_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_8_mean_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_10_mean_vel , X[1,:-1])]
+    mean_MSE_no_assim_vel = [
+             alg_utils.calc_MSE(runs_1_agents_2_mean_no_assim_vel , X[1,:]) ,
+             alg_utils.calc_MSE(runs_1_agents_4_mean_no_assim_vel , X[1,:]) ,
+             alg_utils.calc_MSE(runs_1_agents_6_mean_no_assim_vel , X[1,:]) ,
+             alg_utils.calc_MSE(runs_1_agents_8_mean_no_assim_vel , X[1,:]) ,
+             alg_utils.calc_MSE(runs_1_agents_10_mean_no_assim_vel , X[1,:])]
+
+    min_P_MSE_vel = [
+             alg_utils.calc_MSE(runs_1_agents_2_min_P_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_4_min_P_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_6_min_P_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_8_min_P_vel , X[1,:-1]) ,
+             alg_utils.calc_MSE(runs_1_agents_10_min_P_vel , X[1,:-1])]
+
 
     article_MSE =[alg_utils.calc_MSE(runs_1_agents_2_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_3_article , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_4_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_5_article , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_6_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_7_article , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_8_article , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_9_article , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_10_article , X[0,:-1])]
 
+    mean_MSE_no_covs = [alg_utils.calc_MSE(runs_1_agents_2_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_3_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_5_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_7_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_9_mean_no_covs , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_mean_no_covs , X[0,:-1])]
+
+    MSE_no_angle_pos = [
+                 alg_utils.calc_MSE(no_angle_dist_05_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_06_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_07_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_08_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_09_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_1_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_2_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_3_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_4_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_5_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_10_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_15_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_20_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_25_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_30_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_35_pos , X[0,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_40_pos , X[0,:-1]) ,
+                ]
+    MSE_no_angle_vel = [
+                 alg_utils.calc_MSE(no_angle_dist_05_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_06_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_07_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_08_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_09_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_1_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_2_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_3_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_4_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_5_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_10_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_15_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_20_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_25_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_30_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_35_vel , X[1,:-1]) ,
+                 alg_utils.calc_MSE(no_angle_dist_40_vel , X[1,:-1]) ,
+                ]
+
     mean_MSE = [alg_utils.calc_MSE(runs_1_agents_2_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_3_mean , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_4_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_5_mean , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_6_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_7_mean , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_8_mean , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_9_mean , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_10_mean , X[0,:-1])]
 
+
+    mean_no_assim_MSE = [alg_utils.calc_MSE(runs_1_agents_2_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_3_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_4_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_5_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_6_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_7_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_8_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_9_mean_no_assim , X[0,:]) ,
+                 alg_utils.calc_MSE(runs_1_agents_10_mean_no_assim , X[0,:])]
+
     min_P_MSE = [alg_utils.calc_MSE(runs_1_agents_2_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_3_min_P , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_4_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_5_min_P , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_6_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_7_min_P , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_8_min_P , X[0,:-1]) ,
+                 alg_utils.calc_MSE(runs_1_agents_9_min_P , X[0,:-1]) ,
                  alg_utils.calc_MSE(runs_1_agents_10_min_P , X[0,:-1])]
 
 
 
-    axs.plot([2,4,6,8,10],article_MSE,'b')
-    axs.plot([2,4,6,8,10],mean_MSE,'r')
-    axs.plot([2,4,6,8,10],min_P_MSE,'k')
+    axs[0].plot([2,3,4,5,6,7,8,9,10],article_MSE,'b')
+    axs[0].plot([2,3,4,5,6,7,8,9,10],mean_MSE,'r')
+    axs[0].plot([2,3,4,5,6,7,8,9,10],min_P_MSE,'k')
+    # axs[0].plot([2,3,4,5,6,7,8,9,10],mean_no_assim_MSE,'g')
+    axs[0].plot([2,3,4,5,6,7,8,9,10],mean_MSE_no_covs,'g')
 
-    axs.grid()
-    axs.legend(['Sensors assimilation', 'Sensors mean','Sensors min covariance'])
-    axs.set_title('MSE (Position X)')
-    axs.set_xlabel('Sensors count')
-    axs.set_ylabel('Amplitude')
+    axs[1].plot([2,4,6,8,10],article_MSE_vel,'b')
+    axs[1].plot([2,4,6,8,10],mean_MSE_vel,'r')
+    axs[1].plot([2,4,6,8,10],min_P_MSE_vel,'k')
+    axs[1].plot([2,4,6,8,10],mean_MSE_no_covs_vel,'g')
+    # axs[1].plot([2,4,6,8,10],mean_MSE_no_assim_vel,'g')
+
+    axs[0].grid()
+    axs[0].legend(['Sensors assimilation', 'Sensors mean with covs','Sensors min covariance','Sensors mean no covs'])
+    axs[0].set_title('MSE (Position)')
+    axs[0].set_xlabel('Sensors count')
+    # axs[0].set_ylabel('Amplitude')
+
+    axs[1].grid()
+    axs[1].legend(['Sensors assimilation', 'Sensors mean with covs','Sensors min covariance' , 'Sensors mean no covs'])
+    axs[1].set_title('MSE (Velocity)')
+    axs[1].set_xlabel('Sensors count')
+    # axs[1].set_ylabel('Amplitude')
+
+    axs1[0].plot([0.5,0.6,0.7,0.8,0.9,1,2,3,4,5,10,15,20,25,30,35,40],MSE_no_angle_pos,'b')
+    axs1[1].plot([0.5,0.6,0.7,0.8,0.9,1,2,3,4,5,10,15,20,25,30,35,40],MSE_no_angle_vel,'b')
+
+    axs1[0].grid()
+    axs1[0].legend(['Sensors assimilation', 'Sensors mean with covs','Sensors min covariance','Sensors mean no covs'])
+    axs1[0].set_title('MSE (Position)')
+    axs1[0].set_xlabel('Distance from')
+    # axs[0].set_ylabel('Amplitude')
+
+    axs1[1].grid()
+    axs1[1].legend(['Sensors assimilation', 'Sensors mean with covs','Sensors min covariance' , 'Sensors mean no covs'])
+    axs1[1].set_title('MSE (Velocity)')
+    axs1[1].set_xlabel('Sensors count')
+    # axs[1].set_ylabel('Amplitude')
+
+def two_STD_graphs(T):
+    fig,ax = plt.subplots(2,2)
+    five_sensors_P_vel = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\P_five_sensors_vel_assim.csv')
+    five_sensors_STD_vel = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\STD_OF_MC_five_sensors_vel_assim.csv')
+    five_sensors_P_pos = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\P_five_sensors_pos_assim.csv')
+    five_sensors_STD_pos = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\STD_OF_MC_five_sensors_pos_assim.csv')
+    one_sensors_P_pos = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\P_one_sensors_pos.csv')
+    one_sensors_STD_pos = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\STD_OF_MC_one_sensors_pos.csv')
+    one_sensors_P_vel = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\P_one_sensors_vel.csv')
+    one_sensors_STD_vel = pd.read_csv(r'C:\Users\gilim\Desktop\kalman_filtering-projectDevelopment\figures\distance_R_01_RF_005_Q10_pos01 - another one\MSE\STD_OF_MC_one_sensors_vel.csv')
+
+    ax[0, 0].plot(T, one_sensors_P_pos['0'])
+    ax[0, 0].plot(T, one_sensors_STD_pos['0'])
+
+    ax[1, 0].plot(T, one_sensors_P_vel['0'])
+    ax[1, 0].plot(T, one_sensors_STD_vel['0'])
+
+    ax[0,1].plot(T[:-1] , five_sensors_P_pos['0'])
+    ax[0,1].plot(T[:-1] , five_sensors_STD_pos['0'])
+
+    ax[1,1].plot(T[:-1] , five_sensors_P_vel['0'])
+    ax[1,1].plot(T[:-1] , five_sensors_STD_vel['0'])
+
+    ax[0,0].set_xlabel('Time [sec]')
+    ax[0,1].set_xlabel('Time [sec]')
+    ax[1,0].set_xlabel('Time [sec]')
+    ax[1,1].set_xlabel('Time [sec]')
+
+    ax[0,0].set_ylabel('Position [M]')
+    ax[0,1].set_ylabel('Position [M]')
+    ax[1,0].set_ylabel('Velocity [M/s]')
+    ax[1,1].set_ylabel('Velocity [M/s]')
+
+
+    ax[0,0].legend(['Estimator STD','MC STD'])
+    ax[0,1].legend(['Estimator STD','MC STD'])
+    ax[1,0].legend(['Estimator STD','MC STD'])
+    ax[1,1].legend(['Estimator STD','MC STD'])
+
+
+    ax[0,0].grid()
+    ax[0,1].grid()
+    ax[1,0].grid()
+    ax[1,1].grid()
+
+    ax[0,0].set_title('One Sensor STD of MC - Position')
+    ax[0,1].set_title('Five assimilated Sensors STD of MC - Position')
+    ax[1,0].set_title('One Sensor STD of MC - Velocity')
+    ax[1,1].set_title('Five assimilated Sensors STD of MC - Velocity')
+
+
+
